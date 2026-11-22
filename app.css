@@ -7,7 +7,7 @@ a{color:inherit}
 header.top{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,10,10,.85);backdrop-filter:blur(8px);z-index:5}
 header.top .wrap{display:flex;align-items:center;gap:20px;height:60px}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;font-size:17px;text-decoration:none}
-.logo svg{width:24px;height:24px}
+
 nav{display:flex;gap:4px;margin-left:8px}
 nav a{padding:7px 12px;border-radius:10px;text-decoration:none;color:var(--mut);font-weight:500;font-size:14px}
 nav a:hover{color:var(--fg)}nav a.on{color:var(--fg);background:var(--panel2)}
@@ -32,3 +32,18 @@ label{display:block;font-size:13px;font-weight:500;color:var(--mut);margin:0 0 6
 .muted{color:var(--mut)}.small{font-size:13px}
 footer{border-top:1px solid var(--line);margin-top:60px;padding:24px 0;color:var(--dim);font-size:13px}
 @media(max-width:560px){nav a{padding:7px 9px}.net{display:none}}
+
+/* flame */
+.flame{width:26px;height:26px;overflow:visible;filter:drop-shadow(0 0 5px rgba(255,255,255,.35));animation:glow 2.4s ease-in-out infinite}
+.flame .fo,.flame .fi{transform-box:fill-box;transform-origin:50% 100%}
+.flame .fo{animation:flick 1.3s ease-in-out infinite}
+.flame .fi{animation:flick 0.9s ease-in-out infinite reverse}
+@keyframes flick{0%,100%{transform:scale(1,1) skewX(0)}20%{transform:scale(.95,1.07) skewX(3deg)}45%{transform:scale(1.03,.95) skewX(-2deg)}70%{transform:scale(.97,1.05) skewX(2deg)}}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 4px rgba(255,255,255,.25))}50%{filter:drop-shadow(0 0 9px rgba(255,255,255,.55))}}
+/* motion */
+.btn,.f,.tile,.venue,nav a{transition:background .18s,border-color .18s,transform .18s,color .18s}
+.btn:active{transform:scale(.97)}
+.tile:hover{transform:translateY(-2px)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.rise{animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
