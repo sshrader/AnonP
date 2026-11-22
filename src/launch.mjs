@@ -668,6 +668,11 @@ export async function sweep({ cluster, burner, to }, step) {
   return await signAndSend({ step, conn, cfg, wallet: burner.wallet, tx, labels: { dry: 'Dry run (sweep)', sign: 'Sign sweep', send: 'Send sweep' } });
 }
 
+// Move a wallet's whole SOL balance (minus the network fee) to another address. Used for the optional funding-wallet hop.
+export async function moveAll({ cluster, from, to }, step) {
+  return await sweep({ cluster, burner: from, to }, step);
+}
+
 // Accepts a backup the way people keep it: a JSON array of numbers (the downloaded file) or a base58 private key (what wallets export).
 export function burnerFromString(str) {
   const t = String(str || '').trim();

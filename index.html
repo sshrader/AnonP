@@ -228,6 +228,7 @@ html,body{overflow-x:clip}
         <ul>
           <li><b>Back it up before you fund it.</b> Use Download backup on the launch page. Clearing browser data can erase the key, and a lost key means lost funds.</li>
           <li><b>Phantom works too.</b> You can launch from a wallet you already have. Then the launch is linked to that wallet.</li>
+          <li><b>Funding wallet is optional.</b> Turn on Fund through a second wallet on the launch page. You fund wallet 1, move its SOL to wallet 2 with one button, and the coin launches from wallet 2. This adds one more step in the trail and does not hide where the money came from. Both keys are saved and backed up together.</li>
           <li><b>Sweep is optional.</b> It sends leftover SOL to an address you choose. Doing that links the two wallets on-chain.</li>
         </ul></section>
 
@@ -257,6 +258,7 @@ html,body{overflow-x:clip}
         <ul>
           <li><b>No pool, no custody.</b> There is no deposit-and-withdraw pool. Nobody but you can move your funds.</li>
           <li><b>Funding is visible.</b> If you fund the burner straight from your main wallet, anyone can see the link on a block explorer. For real separation, fund it from an account that is not tied to you.</li>
+          <li><b>A second wallet is not a mixer.</b> The funding-wallet option is a single visible hop. Anyone following the chain on an explorer can still trace it back.</li>
           <li><b>Sweeping links wallets.</b> Sending leftovers or fees to your main wallet links the two. Keep them in the burner if separation matters.</li>
           <li><b>Lose the key, lose the money.</b> Back it up first.</li>
         </ul></section>
@@ -286,7 +288,7 @@ function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
 function ago(t){var s=(Date.now()-t)/1000;if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
 function copy(text,btn){var done=function(){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o},1200)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,function(){});else done()}
 
-var S={meteora:null,raydium:null,cluster:'devnet',platform:null,venues:[],venue:'pump',filter:'',mode:'burner',burner:null,phantom:null,bal:0,imgData:'',saved:false,busy:false,maxBuy:5};
+var S={meteora:null,raydium:null,cluster:'devnet',platform:null,venues:[],venue:'pump',filter:'',mode:'burner',burner:null,funder:null,useFunder:false,fbal:0,phantom:null,bal:0,imgData:'',saved:false,busy:false,maxBuy:5};
 
 // ---------- routing ----------
 function docFees(){var b=$('docfees');if(!b)return;b.textContent='';
@@ -319,29 +321,52 @@ function fail(m){$('err').textContent=m||''}
 $('mode').addEventListener('click',function(e){var m=e.target.getAttribute&&e.target.getAttribute('data-m');if(!m)return;S.mode=m;Array.prototype.forEach.call(this.children,function(b){b.className=b.getAttribute('data-m')===m?'on':''});$('m-burner').hidden=m!=='burner';$('m-phantom').hidden=m!=='phantom';updateAll()});
 
 function B(){return window.BurnerLaunch}
-function loadBurner(){var raw=ls('burnerpad.burner');if(!raw||!B())return;try{S.burner=B().burnerFromSecret(JSON.parse(raw));S.saved=ls('burnerpad.saved')==='1'}catch(e){S.burner=null}}
+function loadBurner(){var raw=ls('burnerpad.burner');if(!raw||!B())return;try{S.burner=B().burnerFromSecret(JSON.parse(raw));S.saved=ls('burnerpad.saved')==='1'}catch(e){S.burner=null}
+  var fr=ls('burnerpad.funder');if(fr&&S.burner){try{S.funder=B().burnerFromSecret(JSON.parse(fr));S.useFunder=true}catch(e){S.funder=null}}}
+
+function fundToggle(){var lab=h('label',{class:'check',style:'margin:0 0 12px'});var t=h('input',{type:'checkbox'});t.checked=S.useFunder;
+  t.onchange=function(){if(!B()){t.checked=!t.checked;return fail('The launcher is still loading. Try again in a moment.')}
+    if(t.checked){S.useFunder=true;if(S.burner&&!S.funder){S.funder=B().newBurner();ls('burnerpad.funder',JSON.stringify(S.funder.secret));S.saved=false;ls('burnerpad.saved','0')}}
+    else{if(S.funder&&S.fbal>0.00002){t.checked=true;return fail('The funding wallet still holds SOL. Move it to the launch wallet first.')}S.useFunder=false;S.funder=null;S.fbal=0;ls('burnerpad.funder',null)}
+    drawBurner();pollBal();updateAll()};
+  lab.appendChild(t);lab.appendChild(h('span',{text:'Fund through a second wallet (optional)'}));return lab}
+function drawFunder(box){
+  box.appendChild(h('label',{text:'1. Funding wallet (send SOL here from your main wallet or exchange)'}));
+  var a=h('div',{class:'addr'},[h('code',{text:S.funder.address})]);var cb=h('button',{class:'btn sm',type:'button',text:'Copy'});cb.onclick=function(){copy(S.funder.address,cb)};a.appendChild(cb);box.appendChild(a);
+  box.appendChild(h('div',{class:'bal'},[h('span',{class:'muted small',text:'Funding wallet balance'}),h('b',{id:'fbalv',text:S.fbal.toFixed(4)+' SOL'})]));
+  if(S.cluster==='devnet'){var fb=h('button',{class:'btn sm',type:'button',style:'margin-top:10px',text:'Devnet faucet (1 SOL)'});fb.onclick=function(){fb.disabled=true;B().airdrop('devnet',S.funder.address,1).then(function(){pollBal()},function(e){fail('Faucet: '+e.message)}).then(function(){fb.disabled=false})};box.appendChild(fb)}
+  var mv=h('button',{class:'btn',type:'button',style:'margin-top:10px',text:'Move to launch wallet'});var st=h('div',{class:'small',style:'margin-top:8px;overflow-wrap:anywhere'});
+  mv.onclick=function(){var say=function(t,bad){st.textContent=t;st.style.color=bad?'var(--bad)':'var(--mut)'};if(S.fbal<=0.00001)return say('The funding wallet has no SOL yet.',1);mv.disabled=true;say('Moving… the funding wallet signs for itself.');$('logcard').hidden=false;$('log').textContent='';
+    var step=function(label){var d=logStep(label);return function(s2,detail,href){d(s2,detail,href);if(s2==='err')say(label+' failed: '+detail,1)}};
+    B().moveAll({cluster:S.cluster,from:S.funder,to:S.burner.address},step).then(function(){say('Moved to the launch wallet.');pollBal()},function(e){say('Move failed: '+(e&&e.message||e),1)}).then(function(){mv.disabled=false})};
+  box.appendChild(mv);box.appendChild(st);
+  box.appendChild(h('div',{class:'note',style:'margin:12px 0',text:'This adds one more step in the trail. It does not hide where the money came from.'}));
+  box.appendChild(h('label',{text:'2. Launch wallet (the coin launches from this one)'}))}
+function backupJson(){return S.funder?{launch:S.burner.secret,funding:S.funder.secret}:S.burner.secret}
+function keyText(){var k=B().secretToBase58(Uint8Array.from(S.burner.secret));return S.funder?'funding: '+B().secretToBase58(Uint8Array.from(S.funder.secret))+'\nlaunch: '+k:k}
 function drawBurner(){var box=$('m-burner');box.textContent='';
-  if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0 0 12px',text:'A new wallet is made in this browser. The private key is never sent to BurnerPad.'}));var b=h('button',{class:'btn pri',type:'button',text:'Generate burner wallet'});b.onclick=function(){if(!B())return fail('The launcher is still loading. Try again in a moment.');S.burner=B().newBurner();S.saved=false;ls('burnerpad.burner',JSON.stringify(S.burner.secret));ls('burnerpad.saved','0');drawBurner();pollBal();updateAll()};box.appendChild(b);return}
+  if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0 0 12px',text:'A new wallet is made in this browser. The private key is never sent to BurnerPad.'}));box.appendChild(fundToggle());var b=h('button',{class:'btn pri',type:'button',text:'Generate burner wallet'});b.onclick=function(){if(!B())return fail('The launcher is still loading. Try again in a moment.');S.burner=B().newBurner();if(S.useFunder){S.funder=B().newBurner();ls('burnerpad.funder',JSON.stringify(S.funder.secret))}S.saved=false;ls('burnerpad.burner',JSON.stringify(S.burner.secret));ls('burnerpad.saved','0');drawBurner();pollBal();updateAll()};box.appendChild(b);return}
+  box.appendChild(fundToggle());if(S.useFunder&&S.funder)drawFunder(box);
   var a=h('div',{class:'addr'},[h('code',{text:S.burner.address})]);var cb=h('button',{class:'btn sm',type:'button',text:'Copy'});cb.onclick=function(){copy(S.burner.address,cb)};a.appendChild(cb);
-  box.appendChild(h('label',{text:'Burner address (send SOL here from a wallet you control)'}));box.appendChild(a);
+  box.appendChild(h('label',{text:S.useFunder&&S.funder?'Launch wallet address':'Burner address (send SOL here from a wallet you control)'}));box.appendChild(a);
   var need=needSol();box.appendChild(h('div',{class:'bal'},[h('span',{class:'muted small',text:'Balance'}),h('b',{id:'balv',text:S.bal.toFixed(4)+' SOL'})]));
   var bar=h('div',{class:'bar'},[h('i',{id:'balbar'})]);box.appendChild(bar);
   box.appendChild(h('div',{class:'muted small',id:'needtxt',style:'margin-top:6px'}));
-  if(S.cluster==='devnet'){var fb=h('button',{class:'btn sm',type:'button',style:'margin-top:10px',text:'Devnet faucet (1 SOL)'});fb.onclick=function(){fb.disabled=true;B().airdrop('devnet',S.burner.address,1).then(function(){pollBal()},function(e){fail('Faucet: '+e.message)}).then(function(){fb.disabled=false})};box.appendChild(fb)}
+  if(S.cluster==='devnet'&&!(S.useFunder&&S.funder)){var fb=h('button',{class:'btn sm',type:'button',style:'margin-top:10px',text:'Devnet faucet (1 SOL)'});fb.onclick=function(){fb.disabled=true;B().airdrop('devnet',S.burner.address,1).then(function(){pollBal()},function(e){fail('Faucet: '+e.message)}).then(function(){fb.disabled=false})};box.appendChild(fb)}
   box.appendChild(h('div',{class:'note warn',text:'Back up the key before you fund this wallet. It lives only in this browser; clearing site data deletes it.'}));
   var row=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
   var rv=h('button',{class:'btn sm',type:'button',text:'Reveal key'});var keybox=h('div',{class:'addr',hidden:'',style:'margin-top:10px'});var kc=h('code',{});keybox.appendChild(kc);
-  rv.onclick=function(){if(keybox.hidden){kc.textContent=B().secretToBase58(Uint8Array.from(S.burner.secret));keybox.hidden=false;rv.textContent='Hide key'}else{kc.textContent='';keybox.hidden=true;rv.textContent='Reveal key'}};
-  var ck=h('button',{class:'btn sm',type:'button',text:'Copy key'});ck.onclick=function(){copy(B().secretToBase58(Uint8Array.from(S.burner.secret)),ck)};
-  var dl=h('button',{class:'btn sm',type:'button',text:'Download backup'});dl.onclick=function(){var blob=new Blob([JSON.stringify(S.burner.secret)],{type:'application/json'});var u=URL.createObjectURL(blob);var x=h('a',{href:u,download:'burnerpad-'+short(S.burner.address)+'.json'});document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)};
+  rv.onclick=function(){if(keybox.hidden){kc.textContent=keyText();kc.style.whiteSpace='pre-wrap';keybox.hidden=false;rv.textContent='Hide key'}else{kc.textContent='';keybox.hidden=true;rv.textContent='Reveal key'}};
+  var ck=h('button',{class:'btn sm',type:'button',text:'Copy key'});ck.onclick=function(){copy(keyText(),ck)};
+  var dl=h('button',{class:'btn sm',type:'button',text:'Download backup'});dl.onclick=function(){var blob=new Blob([JSON.stringify(backupJson())],{type:'application/json'});var u=URL.createObjectURL(blob);var x=h('a',{href:u,download:'burnerpad-'+short(S.burner.address)+'.json'});document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)};
   [rv,ck,dl].forEach(function(x){row.appendChild(x)});box.appendChild(row);box.appendChild(keybox);
   var swb=h('div',{style:'margin-top:16px;padding-top:14px;border-top:1px solid var(--line)'});swb.appendChild(h('label',{text:'Sweep SOL out of this burner'}));var swi=h('input',{id:'swto2',placeholder:'Destination address'});swb.appendChild(swi);swb.appendChild(h('div',{class:'muted small',style:'margin:6px 0 8px',text:'Sends all SOL, minus the network fee. Tokens stay in the burner. This links the destination to the burner on-chain.'}));var swst=h('div',{class:'small',style:'margin-top:8px;overflow-wrap:anywhere'});var swbtn=h('button',{class:'btn sm',type:'button',text:'Sweep SOL'});swbtn.onclick=function(){var to=swi.value.trim();var say=function(t,bad){swst.textContent=t;swst.style.color=bad?'var(--bad)':'var(--mut)'};if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to))return say('Enter a valid destination address.',1);if(!B())return say('The launcher is still loading. Try again in a moment.',1);if(S.bal<=0.00001)return say('This burner has no SOL to sweep.',1);swbtn.disabled=true;say('Sweeping… approve nothing, the burner signs for itself.');$('logcard').hidden=false;$('log').textContent='';var lastLink='';var step=function(label){var d=logStep(label);return function(st,detail,href){d(st,detail,href);if(st==='ok'&&href)lastLink=href;if(st==='err')say(label+' failed: '+detail,1)}};B().sweep({cluster:S.cluster,burner:S.burner,to:to},step).then(function(sig){say('Swept. Sent to '+to.slice(0,4)+'…'+to.slice(-4)+'.');if(lastLink){swst.appendChild(document.createTextNode(' '));swst.appendChild(h('a',{href:lastLink,target:'_blank',rel:'noopener',style:'color:var(--fg);text-decoration:underline',text:'View on Explorer'}))}pollBal()},function(e){say('Sweep failed: '+(e&&e.message||e),1)}).then(function(){swbtn.disabled=false})};swb.appendChild(swbtn);swb.appendChild(swst);box.appendChild(swb);
-  var lab=h('label',{class:'check'});var cbx=h('input',{type:'checkbox'});cbx.checked=S.saved;cbx.onchange=function(){S.saved=cbx.checked;ls('burnerpad.saved',S.saved?'1':'0');updateAll()};lab.appendChild(cbx);lab.appendChild(h('span',{text:'I saved the private key somewhere safe.'}));box.appendChild(lab);
-  var fg=h('button',{class:'btn sm',type:'button',text:'Forget this burner'});var armed=false;fg.onclick=function(){if(!armed){armed=true;fg.textContent='Sure? Any SOL in it is lost without the key. Click again.';return}S.burner=null;S.saved=false;S.bal=0;ls('burnerpad.burner',null);ls('burnerpad.saved',null);drawBurner();updateAll()};box.appendChild(fg);
+  var lab=h('label',{class:'check'});var cbx=h('input',{type:'checkbox'});cbx.checked=S.saved;cbx.onchange=function(){S.saved=cbx.checked;ls('burnerpad.saved',S.saved?'1':'0');updateAll()};lab.appendChild(cbx);lab.appendChild(h('span',{text:S.funder?'I saved both private keys somewhere safe.':'I saved the private key somewhere safe.'}));box.appendChild(lab);
+  var fg=h('button',{class:'btn sm',type:'button',text:S.funder?'Forget these wallets':'Forget this burner'});var armed=false;fg.onclick=function(){if(!armed){armed=true;fg.textContent='Sure? Any SOL in it is lost without the key'+(S.funder?'s':'')+'. Click again.';return}S.burner=null;S.funder=null;S.useFunder=false;S.fbal=0;S.saved=false;S.bal=0;ls('burnerpad.burner',null);ls('burnerpad.funder',null);ls('burnerpad.saved',null);drawBurner();updateAll()};box.appendChild(fg);
   updateBalUi()}
 function needSol(){var buy=Math.max(0,+$('buy').value||0);return buy+(S.cluster==='mainnet'?0.04:0.06)}
 function updateBalUi(){var v=$('balv');if(!v)return;v.textContent=S.bal.toFixed(4)+' SOL';var need=needSol();$('balbar').style.width=Math.min(100,S.bal/need*100)+'%';$('needtxt').textContent=S.bal>=need?'Enough to launch.':'Needs about '+need.toFixed(3)+' SOL: your buy plus network fees and account rent.'}
-var balT;function pollBal(){clearTimeout(balT);if(!S.burner||!B()||location.hash!=='#launch'){balT=setTimeout(pollBal,5000);return}B().balanceOf(S.cluster,S.burner.address).then(function(b){S.bal=b;updateBalUi();updateAll()},function(){}).then(function(){balT=setTimeout(pollBal,5000)})}
+var balT;function pollBal(){clearTimeout(balT);if(!S.burner||!B()||location.hash!=='#launch'){balT=setTimeout(pollBal,5000);return}var fp=S.funder?B().balanceOf(S.cluster,S.funder.address).then(function(b){S.fbal=b;var e=$('fbalv');if(e)e.textContent=b.toFixed(4)+' SOL'},function(){}):Promise.resolve();fp.then(function(){return B().balanceOf(S.cluster,S.burner.address)}).then(function(b){S.bal=b;updateBalUi();updateAll()},function(){}).then(function(){balT=setTimeout(pollBal,5000)})}
 
 // One wallet connection for the whole site: the button in the header connects and disconnects it.
 function provider(){return window.phantom&&window.phantom.solana||window.solana}
@@ -383,7 +408,7 @@ function updateAll(){
   var ready=!S.busy&&!!S.imgData&&$('name').value.trim()&&$('sym').value.trim();
   if(S.mode==='burner')ready=ready&&!!S.burner&&S.saved&&S.bal>=needSol();else ready=ready&&!!S.phantom;
   $('go').disabled=!ready;
-  var why='';if(!S.imgData)why='Add an image.';else if(!$('name').value.trim()||!$('sym').value.trim())why='Add a name and ticker.';else if(S.mode==='burner'){if(!S.burner)why='Generate a burner wallet.';else if(!S.saved)why='Confirm you saved the key.';else if(S.bal<needSol())why='Fund the burner.'}else if(!S.phantom)why='Connect your wallet.';
+  var why='';if(!S.imgData)why='Add an image.';else if(!$('name').value.trim()||!$('sym').value.trim())why='Add a name and ticker.';else if(S.mode==='burner'){if(!S.burner)why='Generate a burner wallet.';else if(!S.saved)why='Confirm you saved the key.';else if(S.bal<needSol())why=S.funder?'Fund the funding wallet, then move to the launch wallet.':'Fund the burner.'}else if(!S.phantom)why='Connect your wallet.';
   $('go').textContent=ready||S.busy?(S.busy?'Launching…':'Launch'):why;
   updateBalUi();
 }
