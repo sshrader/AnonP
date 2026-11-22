@@ -116,7 +116,8 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
 
   // trust.js on bad data
   const { trustChecks } = require('../trust.js');
-  const bad = Object.fromEntries(trustChecks({ authority: { mint: 'x', freeze: 'y' }, devHoldPct: 35, top10Pct: 70, launch: { capped: false, early: 6, checked: 6, heldPct: 22 } }, { split: false }).map((x) => [x.id, x.status]));
+  const bad = Object.fromEntries(trustChecks({ authority: { mint: 'x', freeze: 'y' }, devHoldPct: 35, top10Pct: 70, launch: { capped: false, early: 6, checked: 6, heldPct: 22 } }, { split: false, platformBps: 100 }).map((x) => [x.id, x.status]));
+  check('trust: no platform fee says none', trustChecks({}, { split: true, platformBps: 0 }).find((x) => x.id === 'fees').detail.startsWith('None'));
   check('trust: bad data flagged', bad.mint === 'bad' && bad.freeze === 'bad' && bad.dev === 'bad' && bad.top10 === 'bad' && bad.bundle === 'bad' && bad.fees === 'warn', JSON.stringify(bad));
   const unk = Object.fromEntries(trustChecks({}, null).map((x) => [x.id, x.status]));
   check('trust: missing data is unknown, not ok', unk.mint === 'unknown' && unk.dev === 'unknown' && unk.top10 === 'unknown' && unk.bundle === 'unknown');

@@ -32,7 +32,8 @@ function trustChecks(oc, rec) {
   }
 
   if (rec) {
-    add('fees', 'Platform fee', rec.split ? 'ok' : 'warn',
+    if (!rec.platformBps) add('fees', 'Platform fee', 'ok', 'None. BurnerPad takes no share of this coin\'s creator fees.');
+    else add('fees', 'Platform fee', rec.split ? 'ok' : 'warn',
       rec.split ? 'A ' + (rec.platformBps / 100) + '% share of creator fees was signed on-chain by the creator.' : 'The fee split was not completed, so creator fees go entirely to the creator wallet.');
   }
   return out;
