@@ -116,3 +116,17 @@ nav a .ic{width:18px;height:18px;flex:none;display:none}
 @media(min-width:900px){body.sb header.top .wbtn{margin:auto 0 0 4px;align-self:stretch}body.sb header.top .wbtn + .net{margin-top:0}}
 @media(max-width:899px){header.top .wbtn{margin-left:auto;padding:7px 12px;font-size:13px}}
 @media(max-width:560px){header.top .wrap{flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;row-gap:6px}header.top .wbtn{margin-left:auto;flex:none}header.top nav{order:3;width:100%;margin:0}}
+
+/* Wallet menu */
+.wallet{position:relative}
+.wmenu{position:absolute;z-index:20;min-width:230px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.55)}
+.wmenu[hidden]{display:none}
+.wm-addr{display:flex;flex-direction:column;gap:3px;padding:8px 10px 10px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.wm-addr small{font:600 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.wm-addr code{font:500 12px var(--mono);overflow-wrap:anywhere}
+.wmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--fg);font:500 14px var(--sans);padding:9px 10px;border-radius:8px;cursor:pointer}
+.wmenu button:hover{background:var(--panel)}
+.wmenu button:last-child{color:var(--bad)}
+@media(min-width:900px){body.sb header.top .wallet{margin:auto 0 0 4px;align-self:stretch}body.sb header.top .wallet .wbtn{width:100%;margin:0}body.sb header.top .wallet + .net{margin-top:0}.wmenu{bottom:calc(100% + 8px);left:0;right:0}}
+@media(max-width:899px){header.top .wallet{margin-left:auto}header.top .wallet .wbtn{margin:0}.wmenu{top:calc(100% + 8px);right:0}}
+@media(max-width:560px){header.top .wallet{margin-left:auto;flex:none}}

@@ -35,7 +35,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}td{padding:7px 0;bord
 <header class="top"><div class="wrap">
   <a class="logo" href="/"><svg class="flame" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3b1f"/><stop offset=".55" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ffb02e"/></linearGradient><linearGradient id="fg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb02e"/><stop offset="1" stop-color="#fff0a0"/></linearGradient></defs><path class="fo" d="M32 4c4 10 17 17 17 33a17 17 0 0 1-34 0c0-7 3-11 7-15 0 6 3 8 6 8-3-11 0-19 4-26z" fill="url(#fg1)"/><path class="fi" d="M32 30c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 2 4 3 4-1-5 0-8 1-11z" fill="url(#fg2)"/></svg>BurnerPad</a>
   <nav><a href="/#explore"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></a><a href="/#launch"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3 3 4.5 6 4.5 9.5a4.5 4.5 0 0 1-9 0C7.5 9 9 6 12 3z"/><path d="M12 17v4"/></svg><span>Launch</span></a><a href="/#claim"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span>Claim fees</span></a><a href="/#docs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg><span>Docs</span></a></nav>
-  <button class="btn sm wbtn" id="wbtn" type="button">Connect wallet</button>
+  <div class="wallet"><button class="btn sm wbtn" id="wbtn" type="button" aria-haspopup="menu" aria-expanded="false">Connect wallet</button><div class="wmenu" id="wmenu" role="menu" hidden></div></div>
   <span class="net" id="net">…</span>
 </div></header>
 <main class="wrap" id="main"><p class="skel" style="padding:40px 0">Loading…</p></main>
@@ -133,10 +133,21 @@ function render(j){
   m.appendChild(h('div',{class:'cols'},[left,right]));
 }
 fetch('/api/coin/'+mint).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Not found');return j})}).then(render).catch(function(e){var m=document.getElementById('main');m.textContent='';m.appendChild(h('div',{class:'empty',style:'margin:40px 0;padding:40px 16px;text-align:center;color:var(--mut);border:1px dashed var(--line2);border-radius:12px',text:e.message}))});
-  var wp=function(){return window.phantom&&window.phantom.solana||window.solana},wb=document.getElementById('wbtn'),wa=null;
-  function wui(){wb.textContent=wa?wa.slice(0,4)+'…'+wa.slice(-4):'Connect wallet';wb.className='btn sm wbtn'+(wa?' on':'');wb.title=wa?'Connected. Click to disconnect.':'Connect a Solana wallet'}
-  function wconnect(silent){var p=wp();if(!p)return silent?null:window.open('https://phantom.app','_blank');return p.connect(silent?{onlyIfTrusted:true}:undefined).then(function(r){wa=r.publicKey.toString();wui()},function(){})}
-  wb.onclick=function(){if(wa){var p=wp();wa=null;try{if(p&&p.disconnect)p.disconnect()}catch(e){}wui()}else wconnect(false)};wui();
+  var wp=function(){return window.phantom&&window.phantom.solana||window.solana},wb=document.getElementById('wbtn'),wm=document.getElementById('wmenu'),wa=null;
+  function wui(){wb.textContent=wa?wa.slice(0,4)+'…'+wa.slice(-4):'Connect wallet';wb.className='btn sm wbtn'+(wa?' on':'');wb.title=wa?'Wallet options':'Connect a Solana wallet'}
+  function wclose(){wm.hidden=true;wb.setAttribute('aria-expanded','false')}
+  function wconnect(silent){var p=wp();if(!p)return silent?null:window.open('https://phantom.app','_blank');return p.connect(silent?{onlyIfTrusted:true}:undefined).then(function(r){wa=r.publicKey.toString();wclose();wui()},function(){})}
+  function wdisc(){var p=wp();wa=null;try{if(p&&p.disconnect)p.disconnect()}catch(e){}wclose();wui()}
+  function wopen(){wm.textContent='';var a=wa;wm.appendChild(h('div',{class:'wm-addr'},[h('small',{text:'Connected wallet'}),h('code',{text:a}),h('span',{class:'muted small',id:'wbal',text:'Reading balance…'})]));
+    function item(label,fn){var b=h('button',{type:'button',role:'menuitem',text:label});b.onclick=function(){wclose();fn()};wm.appendChild(b)}
+    item('Copy address',function(){if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(a).catch(function(){})});
+    item('Change wallet',function(){wdisc();setTimeout(function(){wconnect(false)},250)});
+    item('Disconnect',wdisc);
+    wm.hidden=false;wb.setAttribute('aria-expanded','true');
+    if(window.BurnerLaunch)window.BurnerLaunch.balanceOf(mintCluster(),a).then(function(b){var e=document.getElementById('wbal');if(e)e.textContent=b.toFixed(4)+' SOL'},function(){var e=document.getElementById('wbal');if(e)e.textContent=''})}
+  function mintCluster(){return document.getElementById('net').textContent==='Mainnet'?'mainnet':'devnet'}
+  wb.onclick=function(e){e.stopPropagation();if(!wa)return wconnect(false);wm.hidden?wopen():wclose()};wui();
+  document.addEventListener('click',function(e){if(!e.target.closest('.wallet'))wclose()});document.addEventListener('keydown',function(e){if(e.key==='Escape')wclose()});
   var wt=0;(function whook(){var p=wp();if(!p){if(wt++<6)setTimeout(whook,400);return}wconnect(true);if(p.on)p.on('disconnect',function(){wa=null;wui()})})();
 })();
 </script>
