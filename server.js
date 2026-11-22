@@ -267,7 +267,7 @@ function serveStatic(res, file, type, extra) {
   res.end(data);
 }
 const page = (res, file) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' }); res.end(fs.readFileSync(path.join(__dirname, file))); };
-const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b0c0e"/><path d="M32 8c3 8 14 14 14 28a14 14 0 0 1-28 0c0-6 3-9 6-12 0 5 3 7 5 7-2-9 0-17 3-23z" fill="#c6ff3d"/></svg>';
+const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a0a0a"/><path d="M32 8c3 8 14 14 14 28a14 14 0 0 1-28 0c0-6 3-9 6-12 0 5 3 7 5 7-2-9 0-17 3-23z" fill="#fff"/></svg>';
 const CORS = { 'Access-Control-Allow-Origin': '*' };
 
 const server = http.createServer(async (req, res) => {

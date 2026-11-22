@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/app.css">
 <style>
-.hero{padding:56px 0 28px}
+.hero{padding:64px 0 28px;text-align:center}.hero .lede{margin:0 auto}.hero p[style]{justify-content:center}
 .explore-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 16px}
 .filters{display:flex;gap:8px;flex-wrap:wrap}
 .f{appearance:none;border:1px solid var(--line2);background:transparent;color:var(--mut);font:500 13px var(--sans);padding:7px 13px;border-radius:99px;cursor:pointer}
@@ -21,7 +21,7 @@
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 .tile{display:flex;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);text-decoration:none;min-width:0}
 .tile:hover{border-color:var(--line2);background:var(--panel2)}
-.tile img{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--panel2);flex:none}
+.tile img{width:64px;height:64px;border-radius:12px;object-fit:cover;background:var(--panel2);flex:none}
 .tile .t{min-width:0;display:flex;flex-direction:column;gap:3px}
 .tile b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .tile .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -61,14 +61,14 @@
 .log{font:13px var(--mono);display:flex;flex-direction:column;gap:6px}
 .log div{display:flex;gap:8px}.log .s{flex:none;width:14px}
 .log .ok .s{color:var(--ok)}.log .err .s{color:var(--bad)}.log .warn .s{color:var(--warn)}.log .run .s{color:var(--mut)}
-.log a{color:var(--acc)}
+.log a{color:var(--fg);text-decoration:underline}
 .err{color:var(--bad);font-size:14px}
-.done{border:1px solid #3b4a14;background:#10140a;border-radius:var(--r);padding:16px;margin-top:14px}
+.done{border:1px solid var(--line2);background:var(--panel2);border-radius:var(--r);padding:16px;margin-top:14px}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <a class="logo" href="/"><svg viewBox="0 0 64 64"><path d="M32 6c3 9 15 15 15 30a15 15 0 0 1-30 0c0-6 3-10 6-13 0 5 3 7 5 7-2-9 0-17 4-24z" fill="#c6ff3d"/></svg>BurnerPad</a>
+  <a class="logo" href="/"><svg viewBox="0 0 64 64"><path d="M32 6c3 9 15 15 15 30a15 15 0 0 1-30 0c0-6 3-10 6-13 0 5 3 7 5 7-2-9 0-17 4-24z" fill="#fff"/></svg>BurnerPad</a>
   <nav><a href="#explore" id="nav-explore">Explore</a><a href="#launch" id="nav-launch">Launch</a><a href="#how" id="nav-how">How it works</a></nav>
   <span class="net" id="net">…</span>
 </div></header>
