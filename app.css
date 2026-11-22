@@ -34,12 +34,12 @@ footer{border-top:1px solid var(--line);margin-top:60px;padding:24px 0;color:var
 @media(max-width:560px){nav a{padding:7px 9px}.net{display:none}}
 
 /* flame */
-.flame{width:26px;height:26px;overflow:visible;filter:drop-shadow(0 0 5px rgba(255,255,255,.35));animation:glow 2.4s ease-in-out infinite}
+.flame{width:26px;height:26px;overflow:visible;filter:drop-shadow(0 0 5px rgba(255,120,30,.45));animation:glow 2.4s ease-in-out infinite}
 .flame .fo,.flame .fi{transform-box:fill-box;transform-origin:50% 100%}
 .flame .fo{animation:flick 1.3s ease-in-out infinite}
 .flame .fi{animation:flick 0.9s ease-in-out infinite reverse}
 @keyframes flick{0%,100%{transform:scale(1,1) skewX(0)}20%{transform:scale(.95,1.07) skewX(3deg)}45%{transform:scale(1.03,.95) skewX(-2deg)}70%{transform:scale(.97,1.05) skewX(2deg)}}
-@keyframes glow{0%,100%{filter:drop-shadow(0 0 4px rgba(255,255,255,.25))}50%{filter:drop-shadow(0 0 9px rgba(255,255,255,.55))}}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 4px rgba(255,100,20,.3))}50%{filter:drop-shadow(0 0 10px rgba(255,140,40,.7))}}
 /* motion */
 .btn,.f,.tile,.venue,nav a{transition:background .18s,border-color .18s,transform .18s,color .18s}
 .btn:active{transform:scale(.97)}
