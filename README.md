@@ -3,7 +3,7 @@
 A non-custodial token launcher. Launch from a **fresh one-time wallet** that your browser creates and you fund yourself.
 
 - **No pool, no custody.** BurnerPad never holds funds and never sees a private key. The burner's key is generated in the browser and stays there.
-- **Multi-venue.** pump.fun is live. Meteora (Dynamic Bonding Curve) goes live once you create its curve config and set `DBC_CONFIG`. Raydium LaunchLab is listed as "soon".
+- **Multi-venue.** pump.fun is live. Meteora (Dynamic Bonding Curve) goes live once you create its curve config and set `DBC_CONFIG`. Raydium LaunchLab goes live once you create its platform and set `LAUNCHLAB_PLATFORM`.
 - **Clear fee.** A platform share of creator fees is set by a fee-split transaction the creator signs. It is shown before launch and on the coin page. Nothing is taken from your buy.
 - **Public trust checks** on every coin page: mint and freeze authority, creator holdings, top-10 concentration, launch-block buyers. They describe what is on-chain; they are not a safety rating.
 
@@ -34,6 +34,7 @@ Defaults to devnet. Set `CLUSTER=mainnet` and `RPC_URL` for mainnet. Test on dev
 | `PUBLIC_URL` | Public origin, used in metadata links. |
 | `DATA_DIR` | Where metadata, images and the launch list are stored (use a volume). |
 | `ADMIN_TOKEN` | Turns on `/admin` (platform fees overview and payouts). Use a long random value. Without it the page and its API are off. |
+| `LAUNCHLAB_PLATFORM` | Address of the Raydium LaunchLab platform (printed by `npm run launchlab-platform`). Setting it turns the Raydium venue on. `LAUNCHLAB_FEE_PCT` and `LAUNCHLAB_CREATOR_PCT` (default 0.25 and 0.5) only change the numbers shown on the site. |
 | `DBC_CONFIG` | Address of the Meteora curve config (printed by `npm run dbc-config`). Setting it turns the Meteora venue on. |
 | `DBC_FEE_BPS`, `DBC_CREATOR_FEE_PCT` | Display only: the trading fee and the creator's share, shown on the launch page. The real values are in the on-chain config. |
 | `BLOCKED_WORDS` | Extra comma-separated words to reject in names and descriptions. |
@@ -46,6 +47,17 @@ Defaults to devnet. Set `CLUSTER=mainnet` and `RPC_URL` for mainnet. Test on dev
 4. Set `DBC_CONFIG` (and the display values it prints) on the server and redeploy.
 
 Fees on Meteora coins are built into the config, so there is no fee-split transaction. Creators claim theirs on the Claim fees page; the platform claims its share on `/admin` with the fee claimer wallet.
+
+## Raydium LaunchLab setup
+
+LaunchLab coins are made under one platform account that your wallet creates once. The platform account holds your fee, the creator fee and what happens to the graduation liquidity, so the protocol enforces them on every trade.
+
+1. Use a wallet key file outside the repo as `PARTNER_KEYPAIR` (it becomes the platform admin for good; each wallet can have one platform) and fund it with devnet SOL. Set `SOLANA_RPC_URL`.
+2. Look at the numbers: `npm run launchlab-platform -- --check`. Defaults: 0.25% platform fee, 0.5% creator fee, plus Raydium's own fixed 0.25% (about 1.0% in total, pump.fun charges 1.25%). Tune with `LAUNCHLAB_FEE_PCT`, `LAUNCHLAB_CREATOR_PCT` (Raydium allows up to 5), `LAUNCHLAB_FEE_CLAIMER`, `LAUNCHLAB_LP_PLATFORM_PCT` and `LAUNCHLAB_LP_CREATOR_PCT` (the rest of the graduation liquidity is burned).
+3. Create it: `npm run launchlab-platform` (devnet). On mainnet add `--confirm-mainnet`.
+4. Set `LAUNCHLAB_PLATFORM` (and the display values it prints) on the server and redeploy.
+
+Coins use pump.fun's numbers: 1B supply, 793.1M sold on the curve, 85 SOL raised before graduating to a Raydium CPMM pool. Creators' fees collect in one vault per wallet (all of that wallet's coins together). They claim it on the Claim fees page, and the platform claims its share on `/admin` with the fee wallet. Raydium pays fees out as wrapped SOL, so each claim is followed by an unwrap step.
 
 ## Claim fees and admin
 
@@ -62,4 +74,4 @@ Fees on Meteora coins are built into the config, so there is no fee-split transa
 
 ## Status
 
-Server, pages and tests pass locally. The browser bundle, the on-chain launches (pump.fun and Meteora), the fee split, the Meteora fee claims and the sweep have not been run against a live network from the development sandbox. Run a devnet launch before mainnet.
+Server, pages and tests pass locally. The browser bundle, the on-chain launches (pump.fun, Meteora and Raydium LaunchLab), the fee split, the Meteora and LaunchLab fee claims and the sweep have not been run against a live network from the development sandbox. Run a devnet launch before mainnet.

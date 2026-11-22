@@ -54,6 +54,9 @@ function explorer(c,path){return 'https://explorer.solana.com/'+path+(c==='devne
 function meteoraFill(j,mc,ph){
   var tries=0;(function go(){if(!window.BurnerLaunch){if(tries++<40)return setTimeout(go,250);ph.textContent='Curve data is not available right now.';return}
     window.BurnerLaunch.meteoraCurve(j.cluster,j.pool).then(function(m){ph.remove();var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(m.mcSol,1)+' SOL'));st.appendChild(stat('Price',fx(m.priceSol,9)+' SOL'));st.appendChild(stat('Curve',m.migrated?'Graduated':fx(m.progress,1)+'%'));st.appendChild(stat('Pool',j.pool.slice(0,4)+'…'+j.pool.slice(-4)));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,m.progress||0)+'%'})]))},function(){ph.textContent='Curve data is not available right now.'})})()}
+function launchlabFill(j,mc,ph){
+  var tries=0;(function go(){if(!window.BurnerLaunch){if(tries++<40)return setTimeout(go,250);ph.textContent='Curve data is not available right now.';return}
+    window.BurnerLaunch.launchlabCurve(j.cluster,j.pool).then(function(m){ph.remove();var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(m.mcSol,1)+' SOL'));st.appendChild(stat('Raised',fx(m.raisedSol,2)+' / '+fx(m.targetSol,0)+' SOL'));st.appendChild(stat('Curve',m.migrated?'Graduated':fx(m.progress,1)+'%'));st.appendChild(stat('Pool',j.pool.slice(0,4)+'…'+j.pool.slice(-4)));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,m.progress||0)+'%'})]))},function(){ph.textContent='Curve data is not available right now.'})})()}
 function render(j){
   var n=document.getElementById('net');n.textContent=j.cluster==='mainnet'?'Mainnet':'Devnet';if(j.cluster==='mainnet')n.className='net main';
   document.title=j.name+' ($'+j.symbol+') · BurnerPad';
@@ -74,6 +77,7 @@ function render(j){
   var mc=h('div',{class:'card'},[h('h2',{text:'Market'})]);
   if(oc.curve){var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(oc.curve.marketCapSol,1)+' SOL'));st.appendChild(stat('Raised',fx(oc.curve.raisedSol,2)+' SOL'));st.appendChild(stat('Curve',oc.curve.complete?'Graduated':fx(oc.curve.progress,1)+'%'));st.appendChild(stat('Holders',oc.holderCount!=null?fx(oc.holderCount,0):'–'));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,oc.curve.progress||0)+'%'})]))}
   else if(j.venue==='meteora'&&j.pool){var mph=h('p',{class:'muted small',style:'margin:0',text:'Reading the curve…'});mc.appendChild(mph);meteoraFill(j,mc,mph)}
+  else if(j.venue==='raydium'&&j.pool){var rph=h('p',{class:'muted small',style:'margin:0',text:'Reading the curve…'});mc.appendChild(rph);launchlabFill(j,mc,rph)}
   else mc.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Curve data is not available right now.'}));
   right.appendChild(mc);
   // links

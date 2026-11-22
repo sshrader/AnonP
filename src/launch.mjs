@@ -1,12 +1,16 @@
 // Browser-side coin creation on Solana devnet using the official pump SDK.
 // Bundled to dist/launch.js by build.mjs and exposed as window.SparkLaunch.
 import {
-  AddressLookupTableProgram, ComputeBudgetProgram, Connection, Keypair, PublicKey, Transaction, TransactionMessage,
+  AddressLookupTableProgram, ComputeBudgetProgram, Connection, Keypair, PublicKey, Transaction, TransactionInstruction, TransactionMessage,
   VersionedTransaction, LAMPORTS_PER_SOL, SystemProgram
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import { DynamicBondingCurveClient, getPriceFromSqrtPrice } from '@meteora-ag/dynamic-bonding-curve-sdk';
 import { PUMP_SDK, OnlinePumpSdk, getBuyTokenAmountFromSolAmount, feeSharingConfigPda } from '@pump-fun/pump-sdk';
+import {
+  DEV_API_URLS, DEVNET_PROGRAM_ID, LAUNCHPAD_PROGRAM, LaunchpadPool, Raydium, TxVersion,
+  PlatformConfig, getPdaCreatorVault, getPdaLaunchpadConfigId, getPdaLaunchpadPoolId
+} from '@raydium-io/raydium-sdk-v2';
 
 // The pump program is deployed on devnet at the same address as mainnet.
 // Mainnet goes through this site's own /api/rpc/mainnet, so the private RPC address stays on the server.
@@ -794,4 +798,146 @@ export async function claimMeteoraPartnerFees({ cluster, wallet, user, pool, raw
     return t;
   });
   return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } });
+}
+
+
+// ---------- Raydium LaunchLab ----------
+// A LaunchLab coin is a pool made under ONE platform that the platform wallet created once (scripts/launchlab-platform.mjs).
+// The platform fee, the creator fee and the split of the graduation liquidity live in that platform account, so the protocol
+// enforces them on every trade. The creator's fees collect in one vault per wallet (all of that wallet's coins together).
+const ATA_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+const llProgram = (cluster) => (cluster === 'mainnet' ? LAUNCHPAD_PROGRAM : DEVNET_PROGRAM_ID.LAUNCHPAD_PROGRAM);
+const sol9 = (b) => Number(b.toString()) / LAMPORTS_PER_SOL;
+const wsolAta = (owner) => PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), NATIVE_MINT.toBuffer()], ATA_PROGRAM)[0];
+
+// The SDK only builds the transactions here. This site's own wallet flow signs and sends them.
+async function raydiumFor(cluster, conn, userKey) {
+  const r = await Raydium.load({
+    connection: conn, owner: userKey, cluster: cluster === 'mainnet' ? 'mainnet' : 'devnet',
+    disableFeatureCheck: true, disableLoadToken: true, blockhashCommitment: 'confirmed',
+    ...(cluster === 'mainnet' ? {} : { urlConfigs: { ...DEV_API_URLS, BASE_HOST: 'https://api-v3-devnet.raydium.io', OWNER_BASE_HOST: 'https://owner-v1-devnet.raydium.io' } })
+  });
+  // createLaunchpad asks Raydium's API for default curve numbers. We pass every number ourselves, so skip that call.
+  r.api.fetchLaunchConfigs = async () => [];
+  return r;
+}
+
+// A transaction only wants the new mint's signature if the mint is one of its signers.
+function wantsSigner(tx, key) {
+  const m = tx.message;
+  if (m && m.staticAccountKeys) return m.staticAccountKeys.slice(0, m.header.numRequiredSignatures).some((k) => k.equals(key));
+  return (tx.signatures || []).some((s) => s.publicKey && s.publicKey.equals(key));
+}
+
+export async function createCoinLaunchLab({ cluster, wallet, user, name, symbol, uri, devBuySol, platform }, step) {
+  const cfg = config(cluster);
+  const conn = new Connection(cfg.rpc, 'confirmed');
+  const userKey = new PublicKey(user);
+  const platformId = new PublicKey(platform);
+  const programId = llProgram(cluster);
+  const mint = Keypair.generate();
+  await phase(step, 'Network check', async (done) => {
+    await checkNetwork(conn, cfg);
+    const sol = (await conn.getBalance(userKey)) / LAMPORTS_PER_SOL, need = 0.06 + (devBuySol || 0);
+    if (sol < need) throw new Error('Balance is ' + sol.toFixed(3) + ' SOL. A ' + (devBuySol || 0) + ' SOL first buy plus fees needs about ' + need.toFixed(2) + ' SOL.');
+    done('ok', cfg.label + ', balance ' + sol.toFixed(3) + ' SOL');
+  });
+  const built = await phase(step, 'Build create transaction', async (done) => {
+    const raydium = await raydiumFor(cluster, conn, userKey);
+    const configId = getPdaLaunchpadConfigId(programId, NATIVE_MINT, 0, 0).publicKey;
+    const out = await raydium.launchpad.createLaunchpad({
+      programId, platformId, configId, mintA: mint.publicKey, decimals: TOKEN_DECIMALS, mintBDecimals: 9,
+      name, symbol, uri, migrateType: 'cpmm', txVersion: TxVersion.V0,
+      // The same numbers as pump.fun: 1B supply, 793.1M sold on the curve, 85 SOL raised before it graduates.
+      supply: new BN('1000000000000000'), totalSellA: new BN('793100000000000'), totalFundRaisingB: new BN('85000000000'),
+      createOnly: !(devBuySol && devBuySol > 0),
+      buyAmount: new BN(Math.round((devBuySol || 0) * 1e9)), slippage: new BN(300),
+      extraSigners: [mint]
+    });
+    const txs = out.transactions || (out.transaction ? [out.transaction] : []);
+    if (!txs.length) throw new Error('The Raydium SDK built no transaction.');
+    done('ok', 'Mint ' + mint.publicKey.toBase58(), explorerAddress(cfg, mint.publicKey.toBase58()));
+    return { txs, poolId: out.extInfo && out.extInfo.address && out.extInfo.address.poolId };
+  });
+  let signature = '';
+  for (let i = 0; i < built.txs.length; i++) {
+    const tx = built.txs[i], tag = built.txs.length > 1 ? ' (' + (i + 1) + ' of ' + built.txs.length + ')' : '';
+    const creates = wantsSigner(tx, mint.publicKey);
+    const sig = await signAndSend({ step, conn, cfg, wallet, tx, extraSigner: creates ? mint : null, labels: { dry: 'Dry run' + tag, sign: 'Sign' + tag, send: 'Send and confirm' + tag } });
+    // The transaction the mint signed is the one that creates the coin, so that is the one the server checks.
+    if (creates && !signature) signature = sig;
+  }
+  const pool = built.poolId ? built.poolId.toBase58() : getPdaLaunchpadPoolId(programId, mint.publicKey, NATIVE_MINT).publicKey.toBase58();
+  return { signature, mint: mint.publicKey.toBase58(), pool, buySignature: signature, buyError: null, atomic: built.txs.length === 1 };
+}
+
+// Market cap and curve progress of a LaunchLab pool, read in the browser.
+export async function launchlabCurve(cluster, poolAddress) {
+  const conn = new Connection(config(cluster).rpc, 'confirmed');
+  const info = await conn.getAccountInfo(new PublicKey(poolAddress));
+  if (!info) throw new Error('No pool');
+  const p = LaunchpadPool.decode(info.data);
+  const priceSol = (Number(p.virtualB.add(p.realB).toString()) / Number(p.virtualA.sub(p.realA).toString())) * Math.pow(10, p.mintDecimalsA - p.mintDecimalsB);
+  const progress = Number(p.realB.toString()) / Number(p.totalFundRaisingB.toString());
+  return { priceSol, mcSol: priceSol * (Number(p.supply.toString()) / Math.pow(10, p.mintDecimalsA)), progress: Math.round(progress * 1000) / 10, migrated: p.status !== 0, raisedSol: sol9(p.realB), targetSol: sol9(p.totalFundRaisingB) };
+}
+
+// Turns the wrapped SOL that a claim pays out into plain SOL. Raydium pays fees as wrapped SOL, so the claim is followed by this.
+async function unwrapWsol({ step, conn, cfg, wallet, userKey }) {
+  const ata = wsolAta(userKey);
+  const info = await conn.getAccountInfo(ata);
+  if (!info) return null;
+  const tx = new Transaction().add(new TransactionInstruction({ programId: TOKEN_PROGRAM, keys: [{ pubkey: ata, isSigner: false, isWritable: true }, { pubkey: userKey, isSigner: false, isWritable: true }, { pubkey: userKey, isSigner: true, isWritable: false }], data: Buffer.from([9]) }));
+  tx.feePayer = userKey; tx.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+  return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (unwrap)', sign: 'Sign unwrap', send: 'Unwrap to SOL' } });
+}
+
+// SOL waiting in a wallet's LaunchLab creator vault, in SOL (all of that wallet's coins together).
+export async function launchlabCreatorFees(cluster, creator) {
+  const conn = new Connection(config(cluster).rpc, 'confirmed');
+  const vault = getPdaCreatorVault(llProgram(cluster), new PublicKey(creator), NATIVE_MINT).publicKey;
+  try { const b = await conn.getTokenAccountBalance(vault); return Number(b.value.amount) / LAMPORTS_PER_SOL; } catch (e) { return 0; }
+}
+export async function claimLaunchlabCreatorFees({ cluster, wallet, user }, step) {
+  const cfg = config(cluster), conn = new Connection(cfg.rpc, 'confirmed'), userKey = new PublicKey(user);
+  const tx = await phase(step, 'Build claim', async (done) => {
+    const raydium = await raydiumFor(cluster, conn, userKey);
+    const out = await raydium.launchpad.claimCreatorFee({ programId: llProgram(cluster), mintB: NATIVE_MINT, txVersion: TxVersion.V0 });
+    done('ok', 'Claiming your LaunchLab creator fees');
+    return out.transaction;
+  });
+  const sig = await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } });
+  await unwrapWsol({ step, conn, cfg, wallet, userKey }).catch(() => null);
+  return sig;
+}
+
+// The platform's share, for the admin page: the pools listed here are read from chain and each one's unclaimed fee is shown.
+export async function launchlabPlatformFees(cluster, platform, pools) {
+  const conn = new Connection(config(cluster).rpc, 'confirmed');
+  const platformId = new PublicKey(platform);
+  const pinfo = await conn.getAccountInfo(platformId);
+  let claimer = '';
+  if (pinfo) { try { claimer = PlatformConfig.decode(pinfo.data).platformClaimFeeWallet.toBase58(); } catch (e) { claimer = ''; } }
+  const keys = pools.map((p) => new PublicKey(p));
+  const rows = [];
+  for (let i = 0; i < keys.length; i += 90) {
+    const infos = await conn.getMultipleAccountsInfo(keys.slice(i, i + 90));
+    infos.forEach((info, j) => { if (info) { try { const p = LaunchpadPool.decode(info.data); rows.push({ pool: keys[i + j].toBase58(), sol: sol9(p.platformFee) }); } catch (e) { /* not a pool */ } } });
+  }
+  return { claimer, rows };
+}
+export async function claimLaunchlabPlatformFees({ cluster, wallet, user, platform, pools }, step) {
+  const cfg = config(cluster), conn = new Connection(cfg.rpc, 'confirmed'), userKey = new PublicKey(user);
+  const raydium = await raydiumFor(cluster, conn, userKey);
+  const sigs = [];
+  for (const pool of pools) {
+    const tx = await phase(step, 'Build claim', async (done) => {
+      const out = await raydium.launchpad.claimPlatformFee({ programId: llProgram(cluster), platformId: new PublicKey(platform), poolId: new PublicKey(pool), platformClaimFeeWallet: userKey, txVersion: TxVersion.V0 });
+      done('ok', 'Claiming from pool ' + pool.slice(0, 4) + '…' + pool.slice(-4));
+      return out.transaction;
+    });
+    sigs.push(await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } }));
+  }
+  await unwrapWsol({ step, conn, cfg, wallet, userKey }).catch(() => null);
+  return sigs;
 }

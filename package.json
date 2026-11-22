@@ -7,7 +7,8 @@
     "build": "node build.mjs",
     "start": "node server.js",
     "test": "node test/burnerpad.test.js",
-    "dbc-config": "node --env-file=.env scripts/dbc-config.mjs"
+    "dbc-config": "node --env-file=.env scripts/dbc-config.mjs",
+    "launchlab-platform": "node --env-file=.env scripts/launchlab-platform.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -18,6 +19,7 @@
     "bn.js": "^5.2.2",
     "buffer": "^6.0.3",
     "esbuild": "^0.25.0",
-    "@meteora-ag/dynamic-bonding-curve-sdk": "^1.5.13"
+    "@meteora-ag/dynamic-bonding-curve-sdk": "^1.5.13",
+    "@raydium-io/raydium-sdk-v2": "latest"
   }
 }

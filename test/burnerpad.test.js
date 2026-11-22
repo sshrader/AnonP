@@ -139,6 +139,32 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const mt = Object.fromEntries(r.json.trust.map((x) => [x.id, x]));
   check('meteora: coin api has pool and a built-in fee note', r.status === 200 && r.json.pool === mPool && r.json.venue === 'meteora' && /Built into/.test(mt.fees.detail), JSON.stringify(mt.fees));
 
+  // Raydium LaunchLab venue
+  check('raydium: not live without LAUNCHLAB_PLATFORM', (await call('POST', '/api/launched', { mint: addr(), signature: sig, metaId, venue: 'raydium', pool: addr() })).status === 400);
+  const llPlatformKey = addr(); process.env.LAUNCHLAB_PLATFORM = llPlatformKey;
+  const LL_DEV = 'DRay6fNdQ5J82H7xV6uq2aV3mNrUZ1J4PgSKsWgptcm6';
+  r = await call('GET', '/api/state');
+  check('raydium: live once configured, with fee numbers', r.json.venues.find((v) => v.id === 'raydium').live === true && r.json.raydium && r.json.raydium.platform === llPlatformKey && r.json.raydium.feePct === 0.25 && r.json.raydium.creatorPct === 0.5);
+  const rMint = addr(), rPool = addr(), rSig = b58encode(crypto.randomBytes(64)), rPayer = addr();
+  txs[rSig] = mkTx([rPayer, rMint], [LL_DEV, llPlatformKey, rPool, addr()]);
+  check('raydium: missing pool rejected', (await call('POST', '/api/launched', { mint: rMint, signature: rSig, metaId, venue: 'raydium' })).status === 400);
+  const rNoProg = b58encode(crypto.randomBytes(64)); txs[rNoProg] = mkTx([rPayer, rMint], [llPlatformKey, rPool]);
+  check('raydium: tx without the LaunchLab program rejected', (await call('POST', '/api/launched', { mint: rMint, signature: rNoProg, metaId, venue: 'raydium', pool: rPool })).status === 422);
+  const rNoPlat = b58encode(crypto.randomBytes(64)); txs[rNoPlat] = mkTx([rPayer, rMint], [LL_DEV, rPool]);
+  check('raydium: tx from another platform rejected', (await call('POST', '/api/launched', { mint: rMint, signature: rNoPlat, metaId, venue: 'raydium', pool: rPool })).status === 422);
+  const rNoPool = b58encode(crypto.randomBytes(64)); txs[rNoPool] = mkTx([rPayer, rMint], [LL_DEV, llPlatformKey]);
+  check('raydium: tx without the named pool rejected', (await call('POST', '/api/launched', { mint: rMint, signature: rNoPool, metaId, venue: 'raydium', pool: rPool })).status === 422);
+  const rNoMint = b58encode(crypto.randomBytes(64)); txs[rNoMint] = mkTx([rPayer], [rMint, LL_DEV, llPlatformKey, rPool]);
+  check('raydium: tx the new coin did not sign rejected', (await call('POST', '/api/launched', { mint: rMint, signature: rNoMint, metaId, venue: 'raydium', pool: rPool })).status === 422);
+  r = await call('POST', '/api/launched', { mint: rMint, signature: rSig, metaId, venue: 'raydium', pool: rPool, burner: true });
+  check('raydium: valid launch recorded', r.status === 200, JSON.stringify(r.json));
+  check('raydium: filter finds it', (await call('GET', '/api/launches?venue=raydium')).json.launches.length === 1);
+  r = await call('GET', '/api/mycoins?wallet=' + rPayer);
+  check('raydium: mycoins carries venue and pool', r.json.coins.length === 1 && r.json.coins[0].venue === 'raydium' && r.json.coins[0].pool === rPool && !r.json.coins[0].split);
+  r = await call('GET', '/api/coin/' + rMint);
+  const rt = Object.fromEntries(r.json.trust.map((x) => [x.id, x]));
+  check('raydium: coin api has pool and a platform-account fee note', r.status === 200 && r.json.pool === rPool && r.json.venue === 'raydium' && /platform account/.test(rt.fees.detail), JSON.stringify(rt.fees));
+
   // my coins and admin
   r = await call('GET', '/api/mycoins?wallet=' + burner);
   check('mycoins: lists coins for that wallet', r.status === 200 && r.json.coins.length === 1 && r.json.coins[0].mint === mint && r.json.coins[0].split === true);
@@ -151,7 +177,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   check('admin api: no token is 401', (await adm('')).status === 401);
   check('admin api: wrong token is 401', (await adm('nope')).status === 401);
   r = await adm(process.env.ADMIN_TOKEN);
-  const al = r.json.launches.find((x) => x.mint === mint); check('admin api: right token lists launches with wallets and platform share', r.status === 200 && r.json.launches.length === 2 && al && al.wallet === burner && al.platformBps === 100 && r.json.platform.wallet === platform && r.json.dbcConfig === dbcConfigKey, JSON.stringify(r.json).slice(0, 200));
+  const al = r.json.launches.find((x) => x.mint === mint); check('admin api: right token lists launches with wallets and platform share', r.status === 200 && r.json.launches.length === 3 && al && al.wallet === burner && al.platformBps === 100 && r.json.platform.wallet === platform && r.json.dbcConfig === dbcConfigKey && r.json.launchlabPlatform === llPlatformKey, JSON.stringify(r.json).slice(0, 200));
 
   // trust.js on bad data
   const { trustChecks } = require('../trust.js');

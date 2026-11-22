@@ -20,10 +20,13 @@ const PUMP_PROGRAM = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 const RETRY_MS = Number(process.env.LAUNCH_RETRY_MS) || 1500;
 // Meteora goes live once a curve config exists (scripts/dbc-config.mjs) and DBC_CONFIG is set.
 const dbcConfig = () => (B58_RE.test((process.env.DBC_CONFIG || '').trim()) ? process.env.DBC_CONFIG.trim() : '');
+// Raydium LaunchLab goes live once a platform exists (scripts/launchlab-platform.mjs) and LAUNCHLAB_PLATFORM is set.
+const llPlatform = () => (B58_RE.test((process.env.LAUNCHLAB_PLATFORM || '').trim()) ? process.env.LAUNCHLAB_PLATFORM.trim() : '');
+const LAUNCHLAB_PROGRAMS = { mainnet: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj', devnet: 'DRay6fNdQ5J82H7xV6uq2aV3mNrUZ1J4PgSKsWgptcm6' };
 const venues = () => [
   { id: 'pump', name: 'pump.fun', live: true, blurb: 'Bonding curve, graduates to PumpSwap.' },
   { id: 'meteora', name: 'Meteora', live: !!dbcConfig(), blurb: dbcConfig() ? 'Dynamic bonding curve, graduates to a locked DAMM pool.' : 'Dynamic bonding curve. Coming soon.' },
-  { id: 'raydium', name: 'Raydium LaunchLab', live: false, blurb: 'Bonding curve to Raydium. Coming soon.' },
+  { id: 'raydium', name: 'Raydium LaunchLab', live: !!llPlatform(), blurb: llPlatform() ? 'Bonding curve, graduates to a Raydium CPMM pool.' : 'Bonding curve to Raydium. Coming soon.' },
 ];
 const liveVenue = (id) => venues().some((v) => v.id === id && v.live);
 
@@ -183,6 +186,12 @@ async function verifyLaunch(c, sig, mint, venue, pool) {
     if (!signers.includes(mint) || !keys.includes(dbcConfig()) || !B58_RE.test(pool || '') || !keys.includes(pool)) return { error: 'That transaction is not a Meteora launch from this platform\'s curve for this coin.' };
     return { wallet: signers[0] };
   }
+  if (venue === 'raydium') {
+    // A LaunchLab launch: the new coin signed it, and it touches the LaunchLab program, our platform and the pool the page names.
+    const prog = LAUNCHLAB_PROGRAMS[c.cluster === 'mainnet' ? 'mainnet' : 'devnet'];
+    if (!signers.includes(mint) || !keys.includes(prog) || !keys.includes(llPlatform()) || !B58_RE.test(pool || '') || !keys.includes(pool)) return { error: 'That transaction is not a Raydium LaunchLab launch from this platform for this coin.' };
+    return { wallet: signers[0] };
+  }
   if (!signers.includes(mint) || !keys.includes(PUMP_PROGRAM)) return { error: 'That transaction is not a pump.fun launch for this coin.' };
   return { wallet: signers[0] };
 }
@@ -202,13 +211,13 @@ async function launched(req, res) {
   const list = loadLaunches(c);
   if (list.some((l) => l.mint === mint)) return send(res, 409, { error: 'That coin is already listed.' });
   const pool = text(b.pool, 60);
-  if (venue === 'meteora' && !B58_RE.test(pool)) return send(res, 400, { error: 'Missing pool address.' });
+  if ((venue === 'meteora' || venue === 'raydium') && !B58_RE.test(pool)) return send(res, 400, { error: 'Missing pool address.' });
   const vr = await verifyLaunch(c, sig, mint, venue, pool);
   if (vr.error) return send(res, 422, { error: vr.error });
   const meta = readMeta(id);
   const split = /^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(text(b.splitSignature, 120));
   const d = loadLaunches(c); // re-read before writing
-  d.unshift({ mint, signature: sig, wallet: vr.wallet, venue, name: meta.name, symbol: meta.symbol, metaId: id, image: imageIdOf(meta), at: Date.now(), pool: venue === 'meteora' ? pool : '', split: venue === 'meteora' ? false : split, platformBps: venue === 'meteora' ? 0 : (split ? cfg().platform.bps : 0), burner: !!b.burner });
+  d.unshift({ mint, signature: sig, wallet: vr.wallet, venue, name: meta.name, symbol: meta.symbol, metaId: id, image: imageIdOf(meta), at: Date.now(), pool: venue === 'pump' ? '' : pool, split: venue === 'pump' ? split : false, platformBps: venue === 'pump' && split ? cfg().platform.bps : 0, burner: !!b.burner });
   saveLaunches(c, d.slice(0, 5000));
   send(res, 200, { ok: true });
 }
@@ -267,14 +276,16 @@ function adminLaunches(req, res) {
   if (limited('adminfail:' + clientIp(req), 20, true)) return send(res, 429, { error: 'Too many wrong tries. Wait an hour.' });
   if (!adminOk(req)) { limited('adminfail:' + clientIp(req), 20); return send(res, 401, { error: 'Wrong token.' }); }
   const c = cfg();
-  send(res, 200, { cluster: c.cluster, platform: c.platform, dbcConfig: dbcConfig(), launches: loadLaunches(c).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, venue: l.venue, pool: l.pool || '', wallet: l.wallet, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, burner: !!l.burner })) });
+  send(res, 200, { cluster: c.cluster, platform: c.platform, dbcConfig: dbcConfig(), launchlabPlatform: llPlatform(), launches: loadLaunches(c).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, venue: l.venue, pool: l.pool || '', wallet: l.wallet, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, burner: !!l.burner })) });
 }
 
 function stateApi(res) {
   const c = cfg();
   const feeBps = Number(process.env.DBC_FEE_BPS) || 100, creatorPct = process.env.DBC_CREATOR_FEE_PCT === undefined || process.env.DBC_CREATOR_FEE_PCT === '' ? 90 : Math.max(0, Math.min(100, Number(process.env.DBC_CREATOR_FEE_PCT)));
   // The numbers below are shown on the site only. The real values live in the on-chain config.
-  send(res, 200, { cluster: c.cluster, maxBuy: c.maxBuy, platform: c.platform.bps ? c.platform : null, venues: venues(), meteora: dbcConfig() ? { config: dbcConfig(), feeBps, creatorPct } : null });
+  send(res, 200, { cluster: c.cluster, maxBuy: c.maxBuy, platform: c.platform.bps ? c.platform : null, venues: venues(), meteora: dbcConfig() ? { config: dbcConfig(), feeBps, creatorPct } : null,
+    // Shown on the site only. The real rates live in the on-chain platform account.
+    raydium: llPlatform() ? { platform: llPlatform(), feePct: Number(process.env.LAUNCHLAB_FEE_PCT) || 0.25, creatorPct: process.env.LAUNCHLAB_CREATOR_PCT === undefined || process.env.LAUNCHLAB_CREATOR_PCT === '' ? 0.5 : Number(process.env.LAUNCHLAB_CREATOR_PCT) } : null });
 }
 
 const RPC_METHODS = new Set(['getLatestBlockhash', 'getBlockHeight', 'getAccountInfo', 'getMultipleAccounts', 'getBalance', 'getSlot',
