@@ -15,6 +15,7 @@ html,body{overflow-x:clip}
 @media(max-width:640px){.heroFx{padding-bottom:64px!important}}
 .heroFx>*:not(canvas){position:relative;z-index:1}
 #fx{position:absolute;z-index:0;top:0;height:100%;left:50%;width:100vw;transform:translateX(-50%);pointer-events:none;display:block}
+@media(min-width:900px){#fx{width:calc(100vw - 232px)}}
 .hero{padding:64px 0 28px;text-align:center}.hero .lede{margin:0 auto}.hero p[style]{justify-content:center}
 .explore-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 16px}
 .filters{display:flex;gap:8px;flex-wrap:wrap}
@@ -91,10 +92,10 @@ html,body{overflow-x:clip}
 .done{border:1px solid var(--line2);background:var(--panel2);border-radius:var(--r);padding:16px;margin-top:14px}
 </style>
 </head>
-<body>
+<body class="sb">
 <header class="top"><div class="wrap">
   <a class="logo" href="/"><svg class="flame" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3b1f"/><stop offset=".55" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ffb02e"/></linearGradient><linearGradient id="fg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb02e"/><stop offset="1" stop-color="#fff0a0"/></linearGradient></defs><path class="fo" d="M32 4c4 10 17 17 17 33a17 17 0 0 1-34 0c0-7 3-11 7-15 0 6 3 8 6 8-3-11 0-19 4-26z" fill="url(#fg1)"/><path class="fi" d="M32 30c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 2 4 3 4-1-5 0-8 1-11z" fill="url(#fg2)"/></svg>BurnerPad</a>
-  <nav><a href="#explore" id="nav-explore">Explore</a><a href="#launch" id="nav-launch">Launch</a><a href="#claim" id="nav-claim">Claim fees</a><a href="#docs" id="nav-docs">Docs</a></nav>
+  <nav><a href="#explore" id="nav-explore"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></a><a href="#launch" id="nav-launch"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3 3 4.5 6 4.5 9.5a4.5 4.5 0 0 1-9 0C7.5 9 9 6 12 3z"/><path d="M12 17v4"/></svg><span>Launch</span></a><a href="#claim" id="nav-claim"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span>Claim fees</span></a><a href="#docs" id="nav-docs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg><span>Docs</span></a></nav>
   <span class="net" id="net">…</span>
 </div></header>
 
