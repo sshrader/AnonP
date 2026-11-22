@@ -77,3 +77,12 @@ details summary{cursor:pointer;font-weight:600}details[open] summary{margin-bott
 @media(max-width:1020px) and (min-width:821px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.flow li:nth-child(4n)::after{display:block}.flow li:nth-child(2n)::after{display:none}}
 @media(max-width:820px){.flow li:nth-child(4n)::after{display:block}}
 @media(max-width:560px){header.top .wrap{gap:8px}nav{margin-left:0;overflow-x:auto;scrollbar-width:none}nav a{padding:7px 9px;white-space:nowrap}.logo{font-size:15px}.net{display:none}}
+/* Claim page coin rows */
+.crow{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.crow:first-child{border-top:0}
+.crow img{width:40px;height:40px;border-radius:10px;object-fit:cover;flex:none;background:var(--panel2)}
+.crow .ci{display:flex;flex-direction:column;min-width:0;flex:1 1 120px}
+.crow .ci b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .ci .mono{font-size:12px;color:var(--mut)}
+.crow .amt{font:500 13px var(--mono);white-space:nowrap}
+.crow .amt.muted{color:var(--dim);font-family:var(--sans);font-size:12px}
