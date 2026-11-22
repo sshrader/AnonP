@@ -288,9 +288,17 @@ function stateApi(res) {
     raydium: llPlatform() ? { platform: llPlatform(), feePct: Number(process.env.LAUNCHLAB_FEE_PCT) || 0.25, creatorPct: process.env.LAUNCHLAB_CREATOR_PCT === undefined || process.env.LAUNCHLAB_CREATOR_PCT === '' ? 0.5 : Number(process.env.LAUNCHLAB_CREATOR_PCT) } : null });
 }
 
+// Meteora's SDK finds pools and fee balances by searching its program's accounts. That is the one search allowed through the
+// proxy: only that program, and only with a filter, so nobody can pull the whole program through our RPC key.
+const DBC_PROGRAM = 'dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN';
+function dbcScan(params) {
+  const p = Array.isArray(params) ? params : [];
+  const filters = p[1] && p[1].filters;
+  return p[0] === DBC_PROGRAM && Array.isArray(filters) && filters.some((f) => f && f.memcmp);
+}
 const RPC_METHODS = new Set(['getLatestBlockhash', 'getBlockHeight', 'getAccountInfo', 'getMultipleAccounts', 'getBalance', 'getSlot',
   'simulateTransaction', 'sendTransaction', 'getSignatureStatuses', 'getTransaction', 'getGenesisHash', 'getFeeForMessage',
-  'getMinimumBalanceForRentExemption', 'getRecentPrioritizationFees', 'getTokenAccountBalance', 'getEpochInfo', 'getVersion']);
+  'getMinimumBalanceForRentExemption', 'getRecentPrioritizationFees', 'getProgramAccounts', 'getTokenAccountBalance', 'getEpochInfo', 'getVersion']);
 // Forwards one JSON-RPC call to the private mainnet RPC, so its address never reaches the browser.
 async function rpcProxy(req, res) {
   const c = cfg();
@@ -300,6 +308,7 @@ async function rpcProxy(req, res) {
   try { body = JSON.parse(await readBody(req, 200 * 1024)); }
   catch (e) { return send(res, e.status || 400, { error: e.status ? e.message : 'Body must be JSON.' }); }
   if (!body || Array.isArray(body) || typeof body !== 'object' || !RPC_METHODS.has(body.method)) return send(res, 400, { error: 'That call is not allowed.' });
+  if (body.method === 'getProgramAccounts' && !dbcScan(body.params)) return send(res, 400, { error: 'That call is not allowed.' });
   try {
     const r = await fetch(c.rpc, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: body.id == null ? 1 : body.id, method: body.method, params: Array.isArray(body.params) ? body.params : [] }), signal: AbortSignal.timeout(20000) });
     const out = await r.text();
