@@ -9,7 +9,7 @@ import { DynamicBondingCurveClient, getPriceFromSqrtPrice } from '@meteora-ag/dy
 import { PUMP_SDK, OnlinePumpSdk, getBuyTokenAmountFromSolAmount, feeSharingConfigPda } from '@pump-fun/pump-sdk';
 import {
   DEV_API_URLS, DEVNET_PROGRAM_ID, LAUNCHPAD_PROGRAM, LaunchpadPool, Raydium, TxVersion,
-  PlatformConfig, getPdaCreatorVault, getPdaLaunchpadConfigId, getPdaLaunchpadPoolId
+  PlatformConfig, getPdaCreatorVault, getPdaLaunchpadConfigId, getPdaLaunchpadPoolId, getPdaPlatformVault
 } from '@raydium-io/raydium-sdk-v2';
 
 // The pump program is deployed on devnet at the same address as mainnet.
@@ -911,37 +911,30 @@ export async function claimLaunchlabCreatorFees({ cluster, wallet, user }, step)
   return sig;
 }
 
-// The platform's share, for the admin page: the pools listed here are read from chain and each one's unclaimed fee is shown.
-export async function launchlabPlatformFees(cluster, platform, pools) {
+// The platform's share, for the admin page. Raydium pays every LaunchLab trade's platform fee into one vault for the platform.
+export async function launchlabPlatformFees(cluster, platform) {
   const conn = new Connection(config(cluster).rpc, 'confirmed');
   const platformId = new PublicKey(platform);
   const pinfo = await conn.getAccountInfo(platformId);
   let claimer = '';
   if (pinfo) { try { claimer = PlatformConfig.decode(pinfo.data).platformClaimFeeWallet.toBase58(); } catch (e) { claimer = ''; } }
-  const keys = pools.map((p) => new PublicKey(p));
-  const rows = [];
-  for (let i = 0; i < keys.length; i += 90) {
-    const infos = await conn.getMultipleAccountsInfo(keys.slice(i, i + 90));
-    infos.forEach((info, j) => { if (info) { try { const p = LaunchpadPool.decode(info.data); rows.push({ pool: keys[i + j].toBase58(), sol: sol9(p.platformFee) }); } catch (e) { /* not a pool */ } } });
-  }
-  return { claimer, rows };
+  const vault = getPdaPlatformVault(llProgram(cluster), platformId, NATIVE_MINT).publicKey;
+  let sol = 0;
+  try { sol = Number((await conn.getTokenAccountBalance(vault)).value.amount) / LAMPORTS_PER_SOL; } catch (e) { sol = 0; }
+  return { claimer, sol };
 }
-export async function claimLaunchlabPlatformFees({ cluster, wallet, user, platform, pools }, step) {
+export async function claimLaunchlabPlatformFees({ cluster, wallet, user, platform }, step) {
   const cfg = config(cluster), conn = new Connection(cfg.rpc, 'confirmed'), userKey = new PublicKey(user);
-  const raydium = await raydiumFor(cluster, conn, userKey);
-  const sigs = [];
-  for (const pool of pools) {
-    const tx = await phase(step, 'Build claim', async (done) => {
-      const out = await raydium.launchpad.claimPlatformFee({ programId: llProgram(cluster), platformId: new PublicKey(platform), poolId: new PublicKey(pool), platformClaimFeeWallet: userKey, txVersion: TxVersion.V0 });
-      done('ok', 'Claiming from pool ' + pool.slice(0, 4) + '…' + pool.slice(-4));
-      return out.transaction;
-    });
-    sigs.push(await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } }));
-  }
+  const tx = await phase(step, 'Build claim', async (done) => {
+    const raydium = await raydiumFor(cluster, conn, userKey);
+    const out = await raydium.launchpad.claimVaultPlatformFee({ programId: llProgram(cluster), platformId: new PublicKey(platform), mintB: NATIVE_MINT, claimFeeWallet: userKey, txVersion: TxVersion.V0 });
+    done('ok', 'Claiming the platform fees');
+    return out.transaction;
+  });
+  const sig = await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } });
   await unwrapWsol({ step, conn, cfg, wallet, userKey }).catch(() => null);
-  return sigs;
+  return sig;
 }
-
 
 // ---------- Test trading (devnet) ----------
 // Buy and sell on a Meteora or LaunchLab coin from this site, so fees can be generated and claimed while testing.

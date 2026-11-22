@@ -40,8 +40,8 @@ td.n{text-align:right;font-family:var(--mono)}
       <div class="row"><button class="btn pri" id="mclaim" disabled>Claim all</button><span class="muted small" id="mmsg"></span></div><div class="log" id="mlog" style="margin-top:10px"></div>
     </div>
     <div class="card" id="rcard" style="margin-bottom:16px" hidden><h2>Raydium LaunchLab platform fees</h2>
-      <p class="muted small" style="margin:0 0 12px">Your share of trading fees on LaunchLab coins is set in the platform account. Only its fee wallet can claim it: <span class="mono" id="rclaimer">…</span> Claims arrive as SOL.</p>
-      <div class="stats" style="margin:0 0 12px"><div class="stat"><small>Waiting to claim</small><b id="rwait">…</b></div><div class="stat"><small>Pools</small><b id="rpools">…</b></div></div>
+      <p class="muted small" style="margin:0 0 12px">Your share of trading fees on LaunchLab coins collects in one vault for the platform. Only its fee wallet can claim it: <span class="mono" id="rclaimer">…</span> Claims arrive as SOL.</p>
+      <div class="stats" style="margin:0 0 12px"><div class="stat"><small>Waiting to claim</small><b id="rwait">…</b></div><div class="stat"><small>Coins</small><b id="rpools">…</b></div></div>
       <div class="row"><button class="btn pri" id="rclaim" disabled>Claim all</button><span class="muted small" id="rmsg"></span></div><div class="log" id="rlog" style="margin-top:10px"></div>
     </div>
     <div class="tw"><table><thead><tr><th>Coin</th><th>Venue</th><th>Launched</th><th class="n">Platform share</th><th class="n">Waiting in coin</th><th class="n">Platform part</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -79,11 +79,10 @@ var R=null;
 function readRaydium(){
   if(!D.launchlabPlatform){$('rcard').hidden=true;return}$('rcard').hidden=false;
   if(!B()){setTimeout(readRaydium,500);return}
-  var pools=D.launches.filter(function(l){return l.venue==='raydium'&&l.pool}).map(function(l){return l.pool});
-  B().launchlabPlatformFees(D.cluster,D.launchlabPlatform,pools).then(function(m){R=m;$('rclaimer').textContent=m.claimer||'unknown';var t=m.rows.reduce(function(a,r){return a+r.sol},0);$('rwait').textContent=t.toFixed(6)+' SOL';$('rpools').textContent=m.rows.length;rbtn()},function(e){$('rmsg').textContent='Could not read: '+e.message})}
-function rbtn(){var ok=R&&pay&&R.claimer&&pay.address===R.claimer&&R.rows.some(function(r){return r.sol>0});$('rclaim').disabled=!(ok&&!busy);$('rmsg').textContent=!pay?'Connect the fee wallet below.':R&&R.claimer&&pay.address!==R.claimer?'The connected wallet is not the platform fee wallet.':''}
-$('rclaim').onclick=function(){if(busy||!R||!pay)return;busy=true;$('rclaim').disabled=true;$('rlog').textContent='';var pools=R.rows.filter(function(r){return r.sol>0}).map(function(r){return r.pool});
-  B().claimLaunchlabPlatformFees({cluster:D.cluster,wallet:pay.wallet,user:pay.address,platform:D.launchlabPlatform,pools:pools},function(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('rlog').appendChild(row);return function(st,d,hr){row.className=st==='ok'?'ok':st==='warn'?'warn':'err';row.firstChild.textContent=st==='ok'?'✓':st==='warn'?'!':'✕';row.lastChild.textContent=label+(d?' — '+d:'')}}).then(function(){busy=false;readRaydium()},function(e){busy=false;$('rmsg').textContent=e&&e.message||'Claim failed.';rbtn()})};
+  var n=D.launches.filter(function(l){return l.venue==='raydium'}).length;
+  B().launchlabPlatformFees(D.cluster,D.launchlabPlatform).then(function(m){R=m;$('rclaimer').textContent=m.claimer||'unknown';$('rwait').textContent=m.sol.toFixed(6)+' SOL';$('rpools').textContent=n;rbtn()},function(e){$('rmsg').textContent='Could not read: '+e.message})}
+function rbtn(){var ok=R&&pay&&R.claimer&&pay.address===R.claimer&&R.sol>0;$('rclaim').disabled=!(ok&&!busy);$('rmsg').textContent=!pay?'Connect the fee wallet below.':R&&R.claimer&&pay.address!==R.claimer?'The connected wallet is not the platform fee wallet.':''}
+$('rclaim').onclick=function(){if(busy||!R||!pay)return;busy=true;$('rclaim').disabled=true;$('rlog').textContent='';B().claimLaunchlabPlatformFees({cluster:D.cluster,wallet:pay.wallet,user:pay.address,platform:D.launchlabPlatform},function(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('rlog').appendChild(row);return function(st,d,hr){row.className=st==='ok'?'ok':st==='warn'?'warn':'err';row.firstChild.textContent=st==='ok'?'✓':st==='warn'?'!':'✕';row.lastChild.textContent=label+(d?' — '+d:'')}}).then(function(){busy=false;readRaydium()},function(e){busy=false;$('rmsg').textContent=e&&e.message||'Claim failed.';rbtn()})};
 function readFees(){
   readMeteora();readRaydium();
   if(!B()){setTimeout(readFees,500);return}
