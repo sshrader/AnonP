@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Coin · BurnerPad</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<style>
+.head{display:flex;gap:18px;align-items:center;padding:36px 0 22px;flex-wrap:wrap}
+.head img{width:96px;height:96px;border-radius:16px;object-fit:cover;background:var(--panel2)}
+.head h1{margin:0 0 4px;font-size:clamp(24px,4vw,34px)}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px;align-items:start}
+@media(max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:18px}
+.checks{display:flex;flex-direction:column}
+.ck{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.ck:last-child{border:0}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--dim)}
+.ck.ok .dot{background:var(--ok)}.ck.warn .dot{background:var(--warn)}.ck.bad .dot{background:var(--bad)}
+.ck b{font-weight:600;font-size:14.5px;display:block}
+.ck span{color:var(--mut);font-size:13.5px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat small{display:block;color:var(--mut);font-size:12px}.stat b{font:500 17px var(--mono)}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:12px}.bar i{display:block;height:100%;background:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}td{padding:7px 0;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-family:var(--mono)}
+.links{display:flex;gap:8px;flex-wrap:wrap}
+.skel{color:var(--dim)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/"><svg viewBox="0 0 64 64"><path d="M32 6c3 9 15 15 15 30a15 15 0 0 1-30 0c0-6 3-10 6-13 0 5 3 7 5 7-2-9 0-17 4-24z" fill="#c6ff3d"/></svg>BurnerPad</a>
+  <nav><a href="/#explore">Explore</a><a href="/#launch">Launch</a><a href="/#how">How it works</a></nav>
+  <span class="net" id="net">…</span>
+</div></header>
+<main class="wrap" id="main"><p class="skel" style="padding:40px 0">Loading…</p></main>
+<footer><div class="wrap">These checks read public chain data. They describe what is there; they are not a safety rating. Do your own research.</div></footer>
+<script>
+(function(){
+'use strict';
+function h(tag,attrs,kids){var e=document.createElement(tag);for(var k in (attrs||{})){if(k==='text')e.textContent=attrs[k];else if(k==='class')e.className=attrs[k];else e.setAttribute(k,attrs[k])}(kids||[]).forEach(function(c){if(c)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e}
+var mint=location.pathname.split('/').pop();
+var VEN={pump:'pump.fun',meteora:'Meteora',raydium:'Raydium LaunchLab'};
+function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+function ago(t){var s=(Date.now()-t)/1000;if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+function fx(n,d){return n==null?'–':Number(n).toLocaleString('en-US',{maximumFractionDigits:d==null?2:d})}
+function stat(l,v){return h('div',{class:'stat'},[h('small',{text:l}),h('b',{text:v})])}
+function explorer(c,path){return 'https://explorer.solana.com/'+path+(c==='devnet'?'?cluster=devnet':'')}
+function render(j){
+  var n=document.getElementById('net');n.textContent=j.cluster==='mainnet'?'Mainnet':'Devnet';if(j.cluster==='mainnet')n.className='net main';
+  document.title=j.name+' ($'+j.symbol+') · BurnerPad';
+  var m=document.getElementById('main');m.textContent='';
+  var img=h('img',{alt:''});if(j.image)img.src=j.image;
+  var chips=h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;align-items:center'},[h('span',{class:'chip live',text:VEN[j.venue]||j.venue}),j.burner?h('span',{class:'chip',text:'launched from a burner'}):null,h('span',{class:'muted small',text:ago(j.launchedAt)})]);
+  m.appendChild(h('div',{class:'head'},[img,h('div',{},[h('h1',{text:j.name}),h('div',{class:'mono muted',style:'margin-bottom:8px',text:'$'+j.symbol}),chips])]));
+  if(j.description)m.appendChild(h('p',{class:'lede',style:'margin:0 0 22px',text:j.description}));
+  var left=h('div',{class:'stack'}),right=h('div',{class:'stack'});
+  // trust
+  var tc=h('div',{class:'card'},[h('h2',{text:'Checks'})]);var list=h('div',{class:'checks'});
+  j.trust.forEach(function(t){list.appendChild(h('div',{class:'ck '+t.status},[h('i',{class:'dot'}),h('div',{},[h('b',{text:t.label}),h('span',{text:t.detail})])]))});
+  tc.appendChild(list);left.appendChild(tc);
+  // holders
+  var oc=j.onchain||{};
+  if(oc.holders&&oc.holders.length){var hc=h('div',{class:'card'},[h('h2',{text:'Top holders'})]);var tb=h('table');oc.holders.slice(0,10).forEach(function(r){var tag=r.isCurve?' · curve':r.isDev?' · creator':'';var td=h('td',{});if(r.owner)td.appendChild(h('a',{class:'mono',href:explorer(j.cluster,'address/'+r.owner),target:'_blank',rel:'noopener',text:r.short}));else td.appendChild(document.createTextNode(r.short));if(tag)td.appendChild(h('span',{class:'muted',text:tag}));tb.appendChild(h('tr',{},[td,h('td',{text:fx(r.pct,2)+'%'})]))});hc.appendChild(tb);left.appendChild(hc)}
+  // market
+  var mc=h('div',{class:'card'},[h('h2',{text:'Market'})]);
+  if(oc.curve){var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(oc.curve.marketCapSol,1)+' SOL'));st.appendChild(stat('Raised',fx(oc.curve.raisedSol,2)+' SOL'));st.appendChild(stat('Curve',oc.curve.complete?'Graduated':fx(oc.curve.progress,1)+'%'));st.appendChild(stat('Holders',oc.holderCount!=null?fx(oc.holderCount,0):'–'));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,oc.curve.progress||0)+'%'})]))}
+  else mc.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Curve data is not available right now.'}));
+  right.appendChild(mc);
+  // links
+  var lc=h('div',{class:'card'},[h('h2',{text:'Links'})]);var lk=h('div',{class:'links'});
+  lk.appendChild(h('a',{class:'btn sm',href:'https://pump.fun/coin/'+j.mint,target:'_blank',rel:'noopener',text:'pump.fun'}));
+  lk.appendChild(h('a',{class:'btn sm',href:explorer(j.cluster,'address/'+j.mint),target:'_blank',rel:'noopener',text:'Explorer'}));
+  lk.appendChild(h('a',{class:'btn sm',href:explorer(j.cluster,'tx/'+j.signature),target:'_blank',rel:'noopener',text:'Launch tx'}));
+  if(j.twitter)lk.appendChild(h('a',{class:'btn sm',href:j.twitter,target:'_blank',rel:'noopener nofollow',text:'X'}));
+  if(j.telegram)lk.appendChild(h('a',{class:'btn sm',href:j.telegram,target:'_blank',rel:'noopener nofollow',text:'Telegram'}));
+  if(j.website)lk.appendChild(h('a',{class:'btn sm',href:j.website,target:'_blank',rel:'noopener nofollow',text:'Website'}));
+  lc.appendChild(lk);right.appendChild(lc);
+  // facts
+  var fc=h('div',{class:'card'},[h('h2',{text:'Details'})]);var ft=h('table');
+  function row(a,b){ft.appendChild(h('tr',{},[h('td',{text:a}),b]))}
+  row('Mint',h('td',{class:'mono',text:short(j.mint)}));row('Launched by',h('td',{},[h('a',{class:'mono',href:explorer(j.cluster,'address/'+j.creator),target:'_blank',rel:'noopener',text:short(j.creator)})]));
+  row('Supply',h('td',{text:oc.supply?fx(oc.supply,0):'–'}));fc.appendChild(ft);right.appendChild(fc);
+  m.appendChild(h('div',{class:'cols'},[left,right]));
+}
+fetch('/api/coin/'+mint).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Not found');return j})}).then(render).catch(function(e){var m=document.getElementById('main');m.textContent='';m.appendChild(h('div',{class:'empty',style:'margin:40px 0;padding:40px 16px;text-align:center;color:var(--mut);border:1px dashed var(--line2);border-radius:12px',text:e.message}))});
+})();
+</script>
+</body>
+</html>

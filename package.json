@@ -1,0 +1,19 @@
+{
+  "name": "burnerpad",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A non-custodial token launcher. Launch from a fresh one-time wallet that you create and fund yourself.",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.js",
+    "test": "node test/burnerpad.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@pump-fun/pump-sdk": "4.1.0",
+    "@solana/web3.js": "^1.98.4",
+    "bn.js": "^5.2.2",
+    "buffer": "^6.0.3",
+    "esbuild": "^0.25.0"
+  }
+}

@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BurnerPad</title>
+<meta name="description" content="Launch a token from a fresh one-time wallet you create and fund yourself. Non-custodial. No pool.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<style>
+.hero{padding:56px 0 28px}
+.explore-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 16px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.f{appearance:none;border:1px solid var(--line2);background:transparent;color:var(--mut);font:500 13px var(--sans);padding:7px 13px;border-radius:99px;cursor:pointer}
+.f.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.f:disabled{opacity:.5;cursor:not-allowed}
+.f small{font:500 10px var(--mono);margin-left:5px;opacity:.8}
+.search{margin-left:auto;max-width:240px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tile{display:flex;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);text-decoration:none;min-width:0}
+.tile:hover{border-color:var(--line2);background:var(--panel2)}
+.tile img{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--panel2);flex:none}
+.tile .t{min-width:0;display:flex;flex-direction:column;gap:3px}
+.tile b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.tile .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.empty{padding:40px 16px;text-align:center;color:var(--mut);border:1px dashed var(--line2);border-radius:var(--r)}
+/* launch */
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:18px;align-items:start}
+@media(max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:18px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.row2{grid-template-columns:1fr}}
+.field{margin-bottom:14px}
+.venues{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media(max-width:560px){.venues{grid-template-columns:1fr}}
+.venue{text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--fg);font:inherit}
+.venue.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.venue:disabled{opacity:.5;cursor:not-allowed}
+.venue b{display:block;font-size:14px}.venue span{font-size:12px;color:var(--mut)}
+.drop{display:flex;align-items:center;gap:14px;border:1px dashed var(--line2);border-radius:12px;padding:12px;cursor:pointer;background:var(--bg)}
+.drop:hover{border-color:var(--acc)}
+.drop img{width:64px;height:64px;border-radius:10px;object-fit:cover;display:none}
+.drop .ph{width:64px;height:64px;border-radius:10px;background:var(--panel2);display:grid;place-items:center;color:var(--dim);font-size:22px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:4px;border-radius:12px;border:1px solid var(--line)}
+.seg button{border:0;background:transparent;color:var(--mut);font:600 13.5px var(--sans);padding:9px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--panel2);color:var(--fg)}
+.addr{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:8px 10px}
+.addr code{font:13px var(--mono);overflow-wrap:anywhere;flex:1;min-width:0}
+.bal{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 4px}
+.bal b{font:500 22px var(--mono)}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .4s}
+.note{font-size:13px;color:var(--mut);border-left:2px solid var(--line2);padding:2px 0 2px 12px;margin:12px 0}
+.note.warn{border-color:var(--warn)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:12px 0;cursor:pointer}
+.check input{width:auto;margin-top:4px}
+.sum{width:100%;border-collapse:collapse;font-size:14px}
+.sum td{padding:7px 0;border-bottom:1px solid var(--line)}.sum td:last-child{text-align:right;font-family:var(--mono)}
+.sum tr:last-child td{border:0}
+.log{font:13px var(--mono);display:flex;flex-direction:column;gap:6px}
+.log div{display:flex;gap:8px}.log .s{flex:none;width:14px}
+.log .ok .s{color:var(--ok)}.log .err .s{color:var(--bad)}.log .warn .s{color:var(--warn)}.log .run .s{color:var(--mut)}
+.log a{color:var(--acc)}
+.err{color:var(--bad);font-size:14px}
+.done{border:1px solid #3b4a14;background:#10140a;border-radius:var(--r);padding:16px;margin-top:14px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/"><svg viewBox="0 0 64 64"><path d="M32 6c3 9 15 15 15 30a15 15 0 0 1-30 0c0-6 3-10 6-13 0 5 3 7 5 7-2-9 0-17 4-24z" fill="#c6ff3d"/></svg>BurnerPad</a>
+  <nav><a href="#explore" id="nav-explore">Explore</a><a href="#launch" id="nav-launch">Launch</a><a href="#how" id="nav-how">How it works</a></nav>
+  <span class="net" id="net">…</span>
+</div></header>
+
+<main class="wrap">
+
+<section id="v-explore" hidden>
+  <div class="hero">
+    <h1>Launch from a wallet<br>that is not your wallet.</h1>
+    <p class="lede">BurnerPad makes a fresh one-time wallet in your browser, you fund it yourself, and the coin launches from it. We never hold your money and the key never leaves your device.</p>
+    <p style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn pri" href="#launch">Launch a coin</a><a class="btn" href="#how">How it works</a></p>
+  </div>
+  <div class="explore-bar">
+    <div class="filters" id="filters"></div>
+    <input class="search" id="q" placeholder="Search name or ticker" aria-label="Search">
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<section id="v-launch" hidden>
+  <div class="hero" style="padding-bottom:18px"><h1 style="font-size:clamp(26px,4vw,36px)">Launch a coin</h1><p class="lede">Pick a venue, add the basics, choose the wallet that signs.</p></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card">
+        <h2>1 · Venue</h2>
+        <div class="venues" id="venues"></div>
+      </div>
+      <div class="card">
+        <h2>2 · Coin</h2>
+        <div class="field"><label>Image (PNG, JPG, GIF or WEBP, up to 3 MB)</label>
+          <label class="drop" for="img"><span class="ph" id="ph">+</span><img id="prev" alt=""><span class="muted small" id="imgname">Click to choose a file</span></label>
+          <input type="file" id="img" accept="image/png,image/jpeg,image/gif,image/webp" hidden></div>
+        <div class="row2 field"><div><label for="name">Name</label><input id="name" maxlength="32" placeholder="Burner Cat" autocomplete="off"></div>
+          <div><label for="sym">Ticker</label><input id="sym" maxlength="10" placeholder="BCAT" autocomplete="off"></div></div>
+        <div class="field"><label for="desc">Description</label><textarea id="desc" rows="3" maxlength="280" placeholder="What is it? Keep it short."></textarea></div>
+        <div class="row2 field"><div><label for="tw">X (optional)</label><input id="tw" placeholder="@handle" autocomplete="off"></div>
+          <div><label for="tg">Telegram (optional)</label><input id="tg" placeholder="t.me/group" autocomplete="off"></div></div>
+        <div class="field" style="margin:0"><label for="web">Website (optional)</label><input id="web" placeholder="https://" autocomplete="off"></div>
+      </div>
+      <div class="card">
+        <h2>3 · Wallet</h2>
+        <div class="seg" id="mode"><button data-m="burner" class="on">Fresh burner wallet</button><button data-m="phantom">Connect my wallet</button></div>
+        <div id="m-burner" style="margin-top:14px"></div>
+        <div id="m-phantom" hidden style="margin-top:14px"></div>
+      </div>
+    </div>
+    <div class="stack" style="position:sticky;top:76px">
+      <div class="card">
+        <h2>4 · Buy and launch</h2>
+        <div class="field"><label for="buy">Your first buy (SOL, optional)</label><input id="buy" type="number" min="0" step="0.01" value="0"></div>
+        <table class="sum" id="sum"></table>
+        <div class="note" id="feenote"></div>
+        <div id="recipbox" class="field" hidden></div>
+        <button class="btn pri" id="go" style="width:100%;margin-top:6px" disabled>Launch</button>
+        <div class="err" id="err" style="margin-top:10px"></div>
+      </div>
+      <div class="card" id="logcard" hidden><h2>Progress</h2><div class="log" id="log"></div><div id="result"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="v-how" hidden>
+  <div class="hero"><h1>How it works</h1><p class="lede">BurnerPad is a launcher, not a mixer. It keeps your main wallet out of the launch transaction. It does not hide where the money came from.</p></div>
+  <div class="stack" style="max-width:720px">
+    <div class="card"><h2>What happens</h2>
+      <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px">
+        <li>Your browser creates a new keypair. The private key stays on your device and is never sent to BurnerPad.</li>
+        <li>You send SOL to that address from a wallet or exchange you choose. This is your own transfer, signed by you.</li>
+        <li>The burner signs the launch on the venue you pick. You can sweep leftover SOL back out afterwards.</li>
+        <li>BurnerPad checks the launch on-chain and lists it. Coin pages show public checks: authorities, holders, launch-block buyers.</li>
+      </ol></div>
+    <div class="card"><h2>What it does not do</h2>
+      <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px">
+        <li><b>No pool, no custody.</b> There is no deposit-and-withdraw pool. Nobody but you can move your funds.</li>
+        <li><b>Funding is visible.</b> If you fund the burner straight from your main wallet, anyone can see the link on a block explorer. For real separation, fund it from an account that is not tied to you.</li>
+        <li><b>Sweeping links wallets.</b> Sending leftovers or creator fees to your main wallet links the two on-chain. Keep them in the burner if separation matters.</li>
+        <li><b>Lose the key, lose the money.</b> Back it up before you fund it. Clearing browser data can erase it.</li>
+      </ul></div>
+    <div class="card"><h2>Fees</h2><p class="muted" id="howfee" style="margin:0">Loading…</p></div>
+  </div>
+</section>
+
+</main>
+<footer><div class="wrap">BurnerPad is a non-custodial tool. Tokens are risky; nothing here is financial advice. Check every coin yourself.</div></footer>
+
+<script src="/launch.js" defer></script>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+function h(tag,attrs,kids){var e=document.createElement(tag);for(var k in (attrs||{})){if(k==='text')e.textContent=attrs[k];else if(k==='class')e.className=attrs[k];else e.setAttribute(k,attrs[k])}(kids||[]).forEach(function(c){e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e}
+function api(path,opt){return fetch(path,opt).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Request failed');return j})})}
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
+function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+function ago(t){var s=(Date.now()-t)/1000;if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+function copy(text,btn){var done=function(){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o},1200)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,function(){});else done()}
+
+var S={cluster:'devnet',platform:null,venues:[],venue:'pump',filter:'',mode:'burner',burner:null,phantom:null,bal:0,imgData:'',saved:false,busy:false,maxBuy:5};
+
+// ---------- routing ----------
+function route(){var v=(location.hash||'#explore').slice(1);if(['explore','launch','how'].indexOf(v)<0)v='explore';['explore','launch','how'].forEach(function(n){$('v-'+n).hidden=n!==v;$('nav-'+n).className=n===v?'on':''});if(v==='explore')loadGrid();if(v==='launch')updateAll()}
+window.addEventListener('hashchange',route);
+
+// ---------- explore ----------
+function drawFilters(){var f=$('filters');f.textContent='';var all=h('button',{class:'f'+(S.filter===''?' on':''),text:'All'});all.onclick=function(){S.filter='';drawFilters();loadGrid()};f.appendChild(all);S.venues.forEach(function(v){var b=h('button',{class:'f'+(S.filter===v.id?' on':'')},[v.name]);if(!v.live){b.disabled=true;b.appendChild(h('small',{text:'SOON'}))}b.onclick=function(){S.filter=v.id;drawFilters();loadGrid()};f.appendChild(b)})}
+var qt;$('q').addEventListener('input',function(){clearTimeout(qt);qt=setTimeout(loadGrid,250)});
+function loadGrid(){api('/api/launches?venue='+encodeURIComponent(S.filter)+'&q='+encodeURIComponent($('q').value)).then(function(j){var g=$('grid');g.textContent='';if(!j.launches.length){g.className='';g.appendChild(h('div',{class:'empty',text:$('q').value||S.filter?'Nothing matches.':'No launches yet. Be the first.'}));return}g.className='grid';j.launches.forEach(function(l){var a=h('a',{class:'tile',href:'/coin/'+l.mint});var img=h('img',{alt:'',loading:'lazy'});if(l.image)img.src=l.image;a.appendChild(img);var vn=(S.venues.filter(function(v){return v.id===l.venue})[0]||{}).name||l.venue;a.appendChild(h('div',{class:'t'},[h('b',{text:l.name}),h('span',{class:'mono muted small',text:'$'+l.symbol}),h('span',{class:'meta'},[h('span',{class:'chip live',text:vn}),l.burner?h('span',{class:'chip',text:'burner'}):'',h('span',{class:'muted small',text:ago(l.at)})])]));g.appendChild(a)})}).catch(function(e){$('grid').textContent=e.message})}
+
+// ---------- launch: venue ----------
+function drawVenues(){var v=$('venues');v.textContent='';S.venues.forEach(function(x){var b=h('button',{class:'venue'+(S.venue===x.id?' on':''),type:'button'},[h('b',{text:x.name}),h('span',{text:x.live?x.blurb:'Coming soon'})]);if(!x.live)b.disabled=true;b.onclick=function(){S.venue=x.id;drawVenues()};v.appendChild(b)})}
+
+// ---------- launch: image ----------
+$('img').addEventListener('change',function(){var f=this.files[0];if(!f)return;if(f.size>3*1024*1024){fail('That image is over 3 MB.');this.value='';return}var r=new FileReader();r.onload=function(){S.imgData=r.result;$('prev').src=r.result;$('prev').style.display='block';$('ph').style.display='none';$('imgname').textContent=f.name;fail('');updateAll()};r.readAsDataURL(f)});
+function fail(m){$('err').textContent=m||''}
+
+// ---------- launch: wallet modes ----------
+$('mode').addEventListener('click',function(e){var m=e.target.getAttribute&&e.target.getAttribute('data-m');if(!m)return;S.mode=m;Array.prototype.forEach.call(this.children,function(b){b.className=b.getAttribute('data-m')===m?'on':''});$('m-burner').hidden=m!=='burner';$('m-phantom').hidden=m!=='phantom';updateAll()});
+
+function B(){return window.BurnerLaunch}
+function loadBurner(){var raw=ls('burnerpad.burner');if(!raw||!B())return;try{S.burner=B().burnerFromSecret(JSON.parse(raw));S.saved=ls('burnerpad.saved')==='1'}catch(e){S.burner=null}}
+function drawBurner(){var box=$('m-burner');box.textContent='';
+  if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0 0 12px',text:'A new wallet is made in this browser. The private key is never sent to BurnerPad.'}));var b=h('button',{class:'btn pri',type:'button',text:'Generate burner wallet'});b.onclick=function(){if(!B())return fail('The launcher is still loading. Try again in a moment.');S.burner=B().newBurner();S.saved=false;ls('burnerpad.burner',JSON.stringify(S.burner.secret));ls('burnerpad.saved','0');drawBurner();pollBal();updateAll()};box.appendChild(b);return}
+  var a=h('div',{class:'addr'},[h('code',{text:S.burner.address})]);var cb=h('button',{class:'btn sm',type:'button',text:'Copy'});cb.onclick=function(){copy(S.burner.address,cb)};a.appendChild(cb);
+  box.appendChild(h('label',{text:'Burner address (send SOL here from a wallet you control)'}));box.appendChild(a);
+  var need=needSol();box.appendChild(h('div',{class:'bal'},[h('span',{class:'muted small',text:'Balance'}),h('b',{id:'balv',text:S.bal.toFixed(4)+' SOL'})]));
+  var bar=h('div',{class:'bar'},[h('i',{id:'balbar'})]);box.appendChild(bar);
+  box.appendChild(h('div',{class:'muted small',id:'needtxt',style:'margin-top:6px'}));
+  if(S.cluster==='devnet'){var fb=h('button',{class:'btn sm',type:'button',style:'margin-top:10px',text:'Devnet faucet (1 SOL)'});fb.onclick=function(){fb.disabled=true;B().airdrop('devnet',S.burner.address,1).then(function(){pollBal()},function(e){fail('Faucet: '+e.message)}).then(function(){fb.disabled=false})};box.appendChild(fb)}
+  box.appendChild(h('div',{class:'note warn',text:'Back up the key before you fund this wallet. It lives only in this browser; clearing site data deletes it.'}));
+  var row=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
+  var rv=h('button',{class:'btn sm',type:'button',text:'Reveal key'});var keybox=h('div',{class:'addr',hidden:'',style:'margin-top:10px'});var kc=h('code',{});keybox.appendChild(kc);
+  rv.onclick=function(){if(keybox.hidden){kc.textContent=B().secretToBase58(Uint8Array.from(S.burner.secret));keybox.hidden=false;rv.textContent='Hide key'}else{kc.textContent='';keybox.hidden=true;rv.textContent='Reveal key'}};
+  var ck=h('button',{class:'btn sm',type:'button',text:'Copy key'});ck.onclick=function(){copy(B().secretToBase58(Uint8Array.from(S.burner.secret)),ck)};
+  var dl=h('button',{class:'btn sm',type:'button',text:'Download backup'});dl.onclick=function(){var blob=new Blob([JSON.stringify(S.burner.secret)],{type:'application/json'});var u=URL.createObjectURL(blob);var x=h('a',{href:u,download:'burnerpad-'+short(S.burner.address)+'.json'});document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)};
+  [rv,ck,dl].forEach(function(x){row.appendChild(x)});box.appendChild(row);box.appendChild(keybox);
+  var lab=h('label',{class:'check'});var cbx=h('input',{type:'checkbox'});cbx.checked=S.saved;cbx.onchange=function(){S.saved=cbx.checked;ls('burnerpad.saved',S.saved?'1':'0');updateAll()};lab.appendChild(cbx);lab.appendChild(h('span',{text:'I saved the private key somewhere safe.'}));box.appendChild(lab);
+  var fg=h('button',{class:'btn sm',type:'button',text:'Forget this burner'});var armed=false;fg.onclick=function(){if(!armed){armed=true;fg.textContent='Sure? Any SOL in it is lost without the key. Click again.';return}S.burner=null;S.saved=false;S.bal=0;ls('burnerpad.burner',null);ls('burnerpad.saved',null);drawBurner();updateAll()};box.appendChild(fg);
+  updateBalUi()}
+function needSol(){var buy=Math.max(0,+$('buy').value||0);return buy+(S.cluster==='mainnet'?0.04:0.06)}
+function updateBalUi(){var v=$('balv');if(!v)return;v.textContent=S.bal.toFixed(4)+' SOL';var need=needSol();$('balbar').style.width=Math.min(100,S.bal/need*100)+'%';$('needtxt').textContent=S.bal>=need?'Enough to launch.':'Needs about '+need.toFixed(3)+' SOL: your buy plus network fees and account rent.'}
+var balT;function pollBal(){clearTimeout(balT);if(!S.burner||!B()||location.hash!=='#launch'){balT=setTimeout(pollBal,5000);return}B().balanceOf(S.cluster,S.burner.address).then(function(b){S.bal=b;updateBalUi();updateAll()},function(){}).then(function(){balT=setTimeout(pollBal,5000)})}
+
+function drawPhantom(){var box=$('m-phantom');box.textContent='';var p=window.phantom&&window.phantom.solana||window.solana;
+  if(!p){box.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No Solana wallet found in this browser. Install Phantom, or use a burner.'}));return}
+  if(S.phantom){box.appendChild(h('label',{text:'Connected'}));box.appendChild(h('div',{class:'addr'},[h('code',{text:S.phantom.address})]));box.appendChild(h('div',{class:'note warn',text:'Launching from your main wallet puts its address on the coin. Use a burner if you want the launch kept apart.'}));return}
+  var b=h('button',{class:'btn pri',type:'button',text:'Connect wallet'});b.onclick=function(){p.connect().then(function(r){S.phantom={address:r.publicKey.toString(),provider:p};drawPhantom();updateAll()},function(e){fail(e&&e.message||'Connection cancelled.')})};box.appendChild(b)}
+
+// ---------- launch: summary ----------
+function feeBps(){return S.platform?S.platform.bps:0}
+function updateAll(){
+  var buy=Math.max(0,+$('buy').value||0);var t=$('sum');t.textContent='';
+  function row(a,b){var tr=h('tr',{},[h('td',{text:a}),h('td',{text:b})]);t.appendChild(tr)}
+  row('Venue',(S.venues.filter(function(v){return v.id===S.venue})[0]||{}).name||'pump.fun');
+  row('First buy',buy.toFixed(3)+' SOL');
+  row('Network fees and rent','~'+(S.cluster==='mainnet'?'0.04':'0.06')+' SOL');
+  row('BurnerPad fee',feeBps()?(feeBps()/100)+'% of creator fees':'none');
+  var fn=$('feenote');fn.textContent=feeBps()?('BurnerPad takes '+(feeBps()/100)+'% of the coin\'s ongoing creator fees. It is set in a fee-split transaction that you sign and that anyone can read on-chain. Nothing is taken from your buy.'):'No platform fee is set on this server.';
+  var rb=$('recipbox');
+  if(S.mode==='burner'){rb.hidden=false;if(!rb.firstChild){rb.appendChild(h('label',{for:'recip',text:'Creator fees go to'}));var sel=h('select',{id:'recip'});sel.appendChild(h('option',{value:'burner',text:'The burner wallet (claim with its key)'}));sel.appendChild(h('option',{value:'custom',text:'Another address I enter'}));rb.appendChild(sel);var inp=h('input',{id:'recipaddr',placeholder:'Solana address',hidden:'',style:'margin-top:8px'});rb.appendChild(inp);rb.appendChild(h('div',{class:'muted small',style:'margin-top:6px',text:'Sending fees to a wallet you own links it to the burner on-chain.'}));sel.onchange=function(){inp.hidden=sel.value!=='custom'}}}else rb.hidden=true;
+  var ready=!S.busy&&!!S.imgData&&$('name').value.trim()&&$('sym').value.trim();
+  if(S.mode==='burner')ready=ready&&!!S.burner&&S.saved&&S.bal>=needSol();else ready=ready&&!!S.phantom;
+  $('go').disabled=!ready;
+  var why='';if(!S.imgData)why='Add an image.';else if(!$('name').value.trim()||!$('sym').value.trim())why='Add a name and ticker.';else if(S.mode==='burner'){if(!S.burner)why='Generate a burner wallet.';else if(!S.saved)why='Confirm you saved the key.';else if(S.bal<needSol())why='Fund the burner.'}else if(!S.phantom)why='Connect your wallet.';
+  $('go').textContent=ready||S.busy?(S.busy?'Launching…':'Launch'):why;
+  updateBalUi();
+}
+['name','sym','buy','desc'].forEach(function(id){$(id).addEventListener('input',function(){if(id==='buy'){var m=S.maxBuy;if(+this.value>m)this.value=m}updateAll()})});
+
+// ---------- launch: go ----------
+function logStep(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('log').appendChild(row);return function(state,detail,href){row.className=state==='ok'?'ok':state==='warn'?'warn':'err';row.firstChild.textContent=state==='ok'?'✓':state==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(detail){sp.appendChild(document.createTextNode(' — '));if(href){var a=h('a',{href:href,target:'_blank',rel:'noopener',text:detail});sp.appendChild(a)}else sp.appendChild(document.createTextNode(detail))}}}
+$('go').addEventListener('click',function(){
+  if(S.busy)return;fail('');S.busy=true;updateAll();$('logcard').hidden=false;$('log').textContent='';$('result').textContent='';
+  var step=logStep;var buy=Math.max(0,+$('buy').value||0);
+  var signer=S.mode==='burner'?{wallet:S.burner.wallet,address:S.burner.address}:{wallet:S.phantom.provider,address:S.phantom.address};
+  var recip=signer.address;if(S.mode==='burner'&&$('recip')&&$('recip').value==='custom'){recip=$('recipaddr').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(recip)){S.busy=false;updateAll();return fail('Enter a valid Solana address for creator fees.')}}
+  var d=step('Save coin details');
+  var meta;
+  api('/api/metadata',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,symbol:$('sym').value,description:$('desc').value,twitter:$('tw').value,telegram:$('tg').value,website:$('web').value,image:S.imgData})}).then(function(m){meta=m;d('ok','Stored on this server');
+    var bps=feeBps(),sh=null;
+    if(S.platform&&bps&&S.platform.wallet!==recip){sh=[{address:recip,shareBps:10000-bps},{address:S.platform.wallet,shareBps:bps}]}
+    else if(recip!==signer.address){sh=[{address:recip,shareBps:10000}]}
+    return B().createCoin({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,shareholders:sh,allowSplitFallback:S.cluster==='devnet'},step)}).then(function(out){
+      var d2=step('List on BurnerPad');
+      return api('/api/launched',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mint:out.mint,signature:out.signature,metaId:meta.id,venue:S.venue,splitSignature:out.splitSignature||'',burner:S.mode==='burner'})}).then(function(){d2('ok','Listed');finish(out)},function(e){d2('warn','Not listed: '+e.message);finish(out)})
+    }).catch(function(e){S.busy=false;fail(e&&e.message||'Launch failed.');updateAll()})});
+function finish(out){S.busy=false;var box=$('result');box.textContent='';var c=h('div',{class:'done'});c.appendChild(h('b',{text:'Launched.'}));c.appendChild(h('div',{class:'mono small',style:'margin:6px 0 10px;overflow-wrap:anywhere',text:out.mint}));
+  if(out.splitError)c.appendChild(h('div',{class:'err small',text:'The fee split did not go through ('+out.splitError+'). Creator fees go only to the launching wallet.'}));
+  if(out.buyError)c.appendChild(h('div',{class:'err small',text:'The first buy did not go through: '+out.buyError}));
+  var r=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});r.appendChild(h('a',{class:'btn pri sm',href:'/coin/'+out.mint,text:'Open coin page'}));r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:'https://pump.fun/coin/'+out.mint,text:'pump.fun'}));c.appendChild(r);
+  if(S.mode==='burner'){var sw=h('div',{style:'margin-top:14px'});sw.appendChild(h('label',{text:'Sweep leftover SOL out of the burner (optional)'}));sw.appendChild(h('input',{id:'swto',placeholder:'Destination address'}));sw.appendChild(h('div',{class:'muted small',style:'margin:6px 0 8px',text:'This links the destination to the burner on-chain. Tokens you bought stay in the burner.'}));var sb=h('button',{class:'btn sm',type:'button',text:'Sweep SOL'});sb.onclick=function(){var to=$('swto').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to))return fail('Enter a valid destination address.');sb.disabled=true;B().sweep({cluster:S.cluster,burner:S.burner,to:to},logStep).then(function(){pollBal()},function(e){fail(e.message)}).then(function(){sb.disabled=false})};sw.appendChild(sb);c.appendChild(sw)}
+  box.appendChild(c);updateAll()}
+
+// ---------- boot ----------
+function boot(){
+  api('/api/state').then(function(s){S.cluster=s.cluster;S.platform=s.platform;S.venues=s.venues;S.maxBuy=s.maxBuy;var n=$('net');n.textContent=s.cluster==='mainnet'?'Mainnet':'Devnet';if(s.cluster==='mainnet')n.className='net main';
+    $('howfee').textContent=s.platform?'BurnerPad takes '+(s.platform.bps/100)+'% of a coin\'s creator fees, set by a fee-split transaction you sign at launch. Nothing is taken from your buy or your burner. Network fees and rent go to Solana, not to us.':'No platform fee is set on this server. Network fees and rent go to Solana.';
+    drawFilters();drawVenues();route()},function(e){document.body.insertBefore(h('div',{class:'wrap',style:'padding:20px',text:e.message}),document.body.firstChild)});
+  drawPhantom();
+}
+window.addEventListener('load',function(){loadBurner();drawBurner();pollBal();updateAll()});
+boot();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+'use strict';
+const http = require('http');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function b58encode(buf) {
+  let n = 0n; for (const b of buf) n = n * 256n + BigInt(b);
+  let out = ''; while (n > 0n) { out = B58[Number(n % 58n)] + out; n /= 58n; }
+  for (const b of buf) { if (b === 0) out = '1' + out; else break; }
+  return out;
+}
+const addr = () => b58encode(crypto.randomBytes(32));
+let failed = 0;
+function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label + (ok ? '' : ' ' + (extra || ''))); if (!ok) failed++; }
+
+(async () => {
+  process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'burnerpad-'));
+  process.env.LAUNCH_RETRY_MS = '5';
+  const PUMP = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
+  const txs = {}; const chainFns = {};
+  const fakeRpc = http.createServer((req, res) => {
+    let b = ''; req.on('data', (c) => (b += c));
+    req.on('end', () => {
+      const j = JSON.parse(b); let result = null;
+      if (j.method === 'getTransaction') result = txs[j.params[0]] || null;
+      else if (chainFns[j.method]) result = chainFns[j.method](j.params);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: j.id || 1, result }));
+    });
+  });
+  await new Promise((ok) => fakeRpc.listen(0, '127.0.0.1', ok));
+  process.env.DEVNET_RPC_URL = 'http://127.0.0.1:' + fakeRpc.address().port;
+  const platform = addr();
+  process.env.PLATFORM_WALLET = platform; process.env.PLATFORM_BPS = '100';
+  const server = require('../server.js');
+  await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
+  const port = server.address().port;
+  const call = (method, p, body) => new Promise((ok) => {
+    const data = body === undefined ? null : JSON.stringify(body);
+    const r = http.request({ host: '127.0.0.1', port, path: p, method, headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {} }, (res) => {
+      let b = ''; res.on('data', (c) => (b += c)); res.on('end', () => { let j = null; try { j = JSON.parse(b); } catch (e) { /* not json */ } ok({ status: res.statusCode, json: j, text: b, headers: res.headers }); });
+    });
+    if (data) r.write(data); r.end();
+  });
+
+  // tiny valid PNG
+  const PNG = 'data:image/png;base64,' + Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.alloc(40, 1)]).toString('base64');
+
+  // state and pages
+  let r = await call('GET', '/api/state');
+  check('state: devnet by default, 3 venues, only pump live', r.json.cluster === 'devnet' && r.json.venues.length === 3 && r.json.venues.filter((v) => v.live).map((v) => v.id).join() === 'pump');
+  check('state: platform fee 1% published', r.json.platform && r.json.platform.bps === 100 && r.json.platform.wallet === platform);
+  r = await call('GET', '/'); check('index served', r.status === 200 && /BurnerPad/.test(r.text) && r.headers['x-frame-options'] === 'DENY');
+  r = await call('GET', '/coin/' + addr()); check('coin page served', r.status === 200);
+  r = await call('GET', '/app.css'); check('css served', r.status === 200 && /text\/css/.test(r.headers['content-type']));
+  r = await call('POST', '/api/rpc/mainnet', { method: 'getSlot', params: [] }); check('mainnet rpc proxy off on devnet', r.status === 404);
+
+  // metadata
+  r = await call('POST', '/api/metadata', { name: 'Burner Cat', symbol: 'BCAT', description: 'hi', image: PNG, twitter: '@burnercat', telegram: 't.me/burnercat', website: 'https://example.com' });
+  check('metadata: created', r.status === 201 && /^[a-f0-9]{16}$/.test(r.json.id));
+  const metaId = r.json.id;
+  const doc = await call('GET', '/metadata/' + metaId + '.json');
+  check('metadata json served with fields', doc.json && doc.json.name === 'Burner Cat' && doc.json.twitter === 'https://x.com/burnercat' && doc.json.telegram === 'https://t.me/burnercat' && /\/images\/.+\.png$/.test(doc.json.image));
+  const imgPath = new URL(doc.json.image).pathname; const im = await call('GET', imgPath);
+  check('image served as png', im.status === 200 && im.headers['content-type'] === 'image/png');
+  check('metadata: not a real image rejected', (await call('POST', '/api/metadata', { name: 'x', symbol: 'X', image: 'data:image/png;base64,' + Buffer.from('<html>not an image at all</html>').toString('base64') })).status === 400);
+  check('metadata: missing image rejected', (await call('POST', '/api/metadata', { name: 'x', symbol: 'X' })).status === 400);
+  check('metadata: bad ticker rejected', (await call('POST', '/api/metadata', { name: 'x', symbol: 'no spaces', image: PNG })).status === 400);
+  check('metadata: blocked word rejected', (await call('POST', '/api/metadata', { name: 'Hitler Coin', symbol: 'H', image: PNG })).status === 400);
+  check('metadata: javascript website rejected', (await call('POST', '/api/metadata', { name: 'x', symbol: 'X', image: PNG, website: 'javascript:alert(1)' })).status === 400);
+  check('metadata: bad telegram rejected', (await call('POST', '/api/metadata', { name: 'x', symbol: 'X', image: PNG, telegram: 'https://evil.example/t.me/x' })).status === 400);
+  const big = 'data:image/png;base64,' + Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.alloc(3.2 * 1024 * 1024, 1)]).toString('base64');
+  check('metadata: oversize image rejected', [400, 413].includes((await call('POST', '/api/metadata', { name: 'x', symbol: 'X', image: big })).status));
+
+  // launch verification
+  const mint = addr(), burner = addr(), sig = b58encode(crypto.randomBytes(64));
+  const mkTx = (signers, keys) => ({ meta: { err: null }, transaction: { message: { header: { numRequiredSignatures: signers.length }, accountKeys: signers.concat(keys) } } });
+  r = await call('POST', '/api/launched', { mint, signature: sig, metaId, venue: 'pump' });
+  check('launched: unknown transaction rejected', r.status === 422);
+  txs[sig] = mkTx([burner, mint], [PUMP, addr()]);
+  check('launched: bad venue rejected', (await call('POST', '/api/launched', { mint, signature: sig, metaId, venue: 'meteora' })).status === 400);
+  check('launched: unknown meta rejected', (await call('POST', '/api/launched', { mint, signature: sig, metaId: 'f'.repeat(16), venue: 'pump' })).status === 400);
+  const wrong = b58encode(crypto.randomBytes(64)); txs[wrong] = mkTx([burner], [PUMP]);
+  check('launched: tx not signed by the mint rejected', (await call('POST', '/api/launched', { mint, signature: wrong, metaId, venue: 'pump' })).status === 422);
+  const noPump = b58encode(crypto.randomBytes(64)); txs[noPump] = mkTx([burner, mint], [addr()]);
+  check('launched: tx without pump program rejected', (await call('POST', '/api/launched', { mint, signature: noPump, metaId, venue: 'pump' })).status === 422);
+  r = await call('POST', '/api/launched', { mint, signature: sig, metaId, venue: 'pump', burner: true, splitSignature: b58encode(crypto.randomBytes(64)) });
+  check('launched: verified launch recorded', r.status === 200, JSON.stringify(r.json));
+  check('launched: duplicate rejected', (await call('POST', '/api/launched', { mint, signature: sig, metaId, venue: 'pump' })).status === 409);
+
+  // explore
+  r = await call('GET', '/api/launches');
+  check('launches: listed without wallet address', r.json.launches.length === 1 && r.json.launches[0].mint === mint && r.json.launches[0].burner === true && !JSON.stringify(r.json).includes(burner));
+  check('launches: venue filter', (await call('GET', '/api/launches?venue=pump')).json.launches.length === 1 && (await call('GET', '/api/launches?venue=meteora')).json.launches.length === 0);
+  check('launches: search', (await call('GET', '/api/launches?q=bcat')).json.launches.length === 1 && (await call('GET', '/api/launches?q=zzz')).json.launches.length === 0);
+
+  // coin page data and trust checks
+  const SUPPLY = 1000000000n * 1000000n;
+  chainFns.getTokenSupply = () => ({ value: { amount: SUPPLY.toString(), decimals: 6, uiAmountString: '1000000000' } });
+  chainFns.getTokenLargestAccounts = () => ({ value: [{ address: 'a1', amount: (SUPPLY / 20n).toString() }, { address: 'a2', amount: (SUPPLY / 50n).toString() }] });
+  chainFns.getMultipleAccounts = () => ({ value: [{ data: { parsed: { info: { owner: addr() } } } }, { data: { parsed: { info: { owner: addr() } } } }] });
+  chainFns.getTokenAccountsByOwner = () => ({ value: [{ account: { data: { parsed: { info: { tokenAmount: { amount: (SUPPLY / 100n).toString() } } } } } }] });
+  chainFns.getAccountInfo = (p) => (p[1] && p[1].encoding === 'jsonParsed' ? { value: { data: { parsed: { info: { mintAuthority: null, freezeAuthority: null } } } } } : { value: null });
+  chainFns.getSignaturesForAddress = () => [];
+  r = await call('GET', '/api/coin/' + mint);
+  check('coin: found with trust checks', r.status === 200 && Array.isArray(r.json.trust) && r.json.name === 'Burner Cat' && r.json.burner === true);
+  const t = Object.fromEntries(r.json.trust.map((x) => [x.id, x]));
+  check('trust: authorities revoked are ok', t.mint.status === 'ok' && t.freeze.status === 'ok');
+  check('trust: creator 1% is ok', t.dev.status === 'ok', JSON.stringify(t.dev));
+  check('trust: top10 under 30% is ok', t.top10.status === 'ok', JSON.stringify(t.top10));
+  check('trust: platform fee disclosed', t.fees.status === 'ok' && /1%/.test(t.fees.detail), JSON.stringify(t.fees));
+  check('coin: creator wallet exposed on coin page', r.json.creator === burner);
+  check('coin: unknown coin 404', (await call('GET', '/api/coin/' + addr())).status === 404);
+
+  // trust.js on bad data
+  const { trustChecks } = require('../trust.js');
+  const bad = Object.fromEntries(trustChecks({ authority: { mint: 'x', freeze: 'y' }, devHoldPct: 35, top10Pct: 70, launch: { capped: false, early: 6, checked: 6, heldPct: 22 } }, { split: false }).map((x) => [x.id, x.status]));
+  check('trust: bad data flagged', bad.mint === 'bad' && bad.freeze === 'bad' && bad.dev === 'bad' && bad.top10 === 'bad' && bad.bundle === 'bad' && bad.fees === 'warn', JSON.stringify(bad));
+  const unk = Object.fromEntries(trustChecks({}, null).map((x) => [x.id, x.status]));
+  check('trust: missing data is unknown, not ok', unk.mint === 'unknown' && unk.dev === 'unknown' && unk.top10 === 'unknown' && unk.bundle === 'unknown');
+
+  // the server must never accept or store a private key
+  const stored = fs.readdirSync(process.env.DATA_DIR).join();
+  check('no secret-key storage on the server', !/key|secret|wallet/i.test(stored), stored);
+
+  server.close(); fakeRpc.close();
+  console.log(failed ? failed + ' FAILED' : 'ALL PASSED');
+  process.exit(failed ? 1 : 0);
+})();
