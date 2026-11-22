@@ -349,7 +349,7 @@ function keyText(){var k=B().secretToBase58(Uint8Array.from(S.burner.secret));re
 function backupBlock(){var wrap=h('div');
   wrap.appendChild(h('div',{class:'note warn',text:S.funder?'Back up both keys before you send any SOL. They live only in this browser; clearing site data deletes them, and any SOL in either wallet is lost without them.':'Back up the key before you fund this wallet. It lives only in this browser; clearing site data deletes it.'}));
   var row=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
-  var rv=h('button',{class:'btn sm',type:'button',text:'Reveal key'});var keybox=h('div',{class:'addr',hidden:'',style:'margin-top:10px'});var kc=h('code',{});keywrap.appendChild(kc);
+  var rv=h('button',{class:'btn sm',type:'button',text:'Reveal key'});var keybox=h('div',{class:'addr',hidden:'',style:'margin-top:10px'});var kc=h('code',{});keybox.appendChild(kc);
   rv.onclick=function(){if(keybox.hidden){kc.textContent=keyText();kc.style.whiteSpace='pre-wrap';keybox.hidden=false;rv.textContent='Hide key'}else{kc.textContent='';keybox.hidden=true;rv.textContent='Reveal key'}};
   var ck=h('button',{class:'btn sm',type:'button',text:'Copy key'});ck.onclick=function(){copy(keyText(),ck)};
   var dl=h('button',{class:'btn sm',type:'button',text:'Download backup'});dl.onclick=function(){var blob=new Blob([JSON.stringify(backupJson())],{type:'application/json'});var u=URL.createObjectURL(blob);var x=h('a',{href:u,download:'burnerpad-'+short(S.burner.address)+'.json'});document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)};
