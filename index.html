@@ -10,6 +10,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/app.css">
 <style>
+html,body{overflow-x:clip}
+.heroFx{position:relative}
+@media(max-width:640px){.heroFx{padding-bottom:64px!important}}
+.heroFx>*:not(canvas){position:relative;z-index:1}
+#fx{position:absolute;z-index:0;top:0;height:100%;left:50%;width:100vw;transform:translateX(-50%);pointer-events:none;display:block}
 .hero{padding:64px 0 28px;text-align:center}.hero .lede{margin:0 auto}.hero p[style]{justify-content:center}
 .explore-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 16px}
 .filters{display:flex;gap:8px;flex-wrap:wrap}
@@ -98,7 +103,7 @@
 <main class="wrap">
 
 <section id="v-explore" hidden>
-  <div class="hero">
+  <div class="hero heroFx"><canvas id="fx" aria-hidden="true"></canvas>
     <h1>Launch from a wallet<br>that is not your wallet.</h1>
     <p class="lede">BurnerPad makes a fresh one-time wallet in your browser, you fund it yourself, and the coin launches from it. We never hold your money and the key never leaves your device.</p>
     <p style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn pri" href="#launch">Launch a coin</a><a class="btn" href="#how">How it works</a></p>
@@ -350,6 +355,67 @@ function boot(){
 }
 window.addEventListener('load',function(){loadBurner();drawBurner();pollBal();updateAll()});
 boot();
+})();
+
+// ---------- hero animation: a burner sends transactions down a chain to a coin ----------
+(function(){
+var cv=document.getElementById('fx');if(!cv||!cv.getContext)return;var ctx=cv.getContext('2d');
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var W=0,H=0,N=7,blocks=[],packets=[],sparks=[],ripples=[],running=false,last=0,spawn=0,destGlow=0,phase=0;
+var B58='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function rid(){var o='';for(var i=0;i<4;i++)o+=B58[Math.floor(Math.random()*58)];return o+'…'}
+function size(){var r=cv.getBoundingClientRect();if(!r.width||!r.height)return false;var d=Math.min(2,window.devicePixelRatio||1);W=r.width;H=r.height;cv.width=Math.round(W*d);cv.height=Math.round(H*d);ctx.setTransform(d,0,0,d,0,0);N=Math.max(5,Math.round(W/150));var keep=blocks;blocks=[];for(var i=0;i<N;i++)blocks.push({t:i/(N-1),glow:keep[i]?keep[i].glow:0});return true}
+function pad(){return Math.max(46,W*0.075)}
+function pt(t){var nar=W<640,x0=pad(),x1=W-pad(),amp=nar?9:Math.min(44,H*0.13);return{x:x0+(x1-x0)*t,y:(nar?H*0.93:H*0.5)+Math.sin(t*6.2+phase)*amp*Math.sin(t*Math.PI)}}
+function cen(x){var d=Math.abs(x-W/2)/(W/2);return Math.min(1,d*1.25)} // 0 in the middle (behind the text), 1 at the edges
+function step(dt){
+  phase+=dt*0.25;spawn-=dt;
+  if(spawn<=0&&packets.length<3){packets.push({t:0,id:rid()});spawn=1.9}
+  for(var i=packets.length-1;i>=0;i--){var p=packets[i],prev=p.t;p.t+=dt/3.6;blocks.forEach(function(b){if(prev<b.t&&p.t>=b.t)b.glow=1});if(p.t>=1){packets.splice(i,1);destGlow=1;ripples.push({r:20,a:.7})}}
+  blocks.forEach(function(b){b.glow=Math.max(0,b.glow-dt*0.55)});destGlow=Math.max(0,destGlow-dt*0.8);
+  var s0=pt(0);if(Math.random()<dt*22)sparks.push({x:s0.x+(Math.random()-.5)*10,y:s0.y-4,vx:(Math.random()-.3)*18,vy:-(24+Math.random()*40),l:1,s:1+Math.random()*1.8});
+  for(var k=sparks.length-1;k>=0;k--){var q=sparks[k];q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx+=(Math.random()-.5)*30*dt;q.l-=dt*0.9;if(q.l<=0)sparks.splice(k,1)}
+  for(var m=ripples.length-1;m>=0;m--){var r=ripples[m];r.r+=dt*46;r.a-=dt*0.7;if(r.a<=0)ripples.splice(m,1)}
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function glowDot(x,y,r,c){var g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,c);g.addColorStop(1,'rgba(255,120,30,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}
+function draw(time){
+  ctx.clearRect(0,0,W,H);var narrow=W<640;
+  // the chain: a dashed path that flows left to right, faint behind the text and brighter at the edges
+  var lg=ctx.createLinearGradient(0,0,W,0);lg.addColorStop(0,'rgba(255,255,255,.34)');lg.addColorStop(.5,'rgba(255,255,255,.07)');lg.addColorStop(1,'rgba(255,255,255,.34)');
+  ctx.strokeStyle=lg;ctx.lineWidth=1;ctx.setLineDash([3,7]);ctx.lineDashOffset=-time*14;ctx.beginPath();for(var i=0;i<=80;i++){var p=pt(i/80);if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y)}ctx.stroke();ctx.setLineDash([]);
+  // blocks
+  blocks.forEach(function(b,i){if(i===0||i===N-1)return;var p=pt(b.t),a=.1+.35*cen(p.x),s=18;ctx.save();ctx.translate(p.x,p.y);
+    var cg=.25+.75*cen(p.x);if(b.glow>0){glowDot(0,0,30,'rgba(255,150,40,'+(b.glow*.35*cg)+')')}
+    rr(-s/2,-s/2,s,s,4);ctx.fillStyle='rgba(255,170,50,'+(b.glow*.22*cg)+')';ctx.fill();ctx.strokeStyle=b.glow>0.02?'rgba(255,160,50,'+((.35+b.glow*.65)*(.4+.6*cg))+')':'rgba(255,255,255,'+a+')';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=b.glow>0.02?'rgba(255,190,90,'+((.5+b.glow*.5)*(.4+.6*cg))+')':'rgba(255,255,255,'+(a*.9)+')';ctx.fillRect(-4,-3,8,1.3);ctx.fillRect(-4,1,5,1.3);ctx.restore()});
+  // source: the burner
+  var s0=pt(0);glowDot(s0.x,s0.y,46,'rgba(255,110,30,.35)');
+  ctx.save();ctx.translate(s0.x,s0.y);var f=1+Math.sin(time*9)*.05;ctx.scale(f,f*(1+Math.sin(time*13)*.04));
+  ctx.beginPath();ctx.moveTo(0,-15);ctx.bezierCurveTo(5,-8,10,-3,10,4);ctx.bezierCurveTo(10,10,5,14,0,14);ctx.bezierCurveTo(-5,14,-10,10,-10,4);ctx.bezierCurveTo(-10,-1,-6,-4,-4,-7);ctx.bezierCurveTo(-3,-3,-1,-2,0,-2);ctx.bezierCurveTo(-2,-8,-1,-12,0,-15);ctx.closePath();
+  var fg=ctx.createLinearGradient(0,14,0,-15);fg.addColorStop(0,'#ff3b1f');fg.addColorStop(.6,'#ff7a1a');fg.addColorStop(1,'#ffb02e');ctx.fillStyle=fg;ctx.fill();
+  ctx.beginPath();ctx.ellipse(0,7,4,6,0,0,7);ctx.fillStyle='#fff0a0';ctx.fill();ctx.restore();
+  sparks.forEach(function(q){ctx.fillStyle='rgba(255,'+(130+Math.floor(q.l*90))+',40,'+(q.l*.8)+')';ctx.beginPath();ctx.arc(q.x,q.y,q.s*q.l+.3,0,7);ctx.fill()});
+  // destination: the coin
+  var d=pt(1);ripples.forEach(function(r){ctx.strokeStyle='rgba(255,170,60,'+r.a*.6+')';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(d.x,d.y,r.r,0,7);ctx.stroke()});
+  if(destGlow>0)glowDot(d.x,d.y,50,'rgba(255,150,40,'+destGlow*.35+')');
+  ctx.strokeStyle='rgba(255,255,255,'+(.5+destGlow*.45)+')';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(d.x,d.y,18,0,7);ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.25)';ctx.setLineDash([2,4]);ctx.beginPath();ctx.arc(d.x,d.y,24,time*0.6,time*0.6+6.28);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,'+(190+Math.floor(destGlow*50))+',90,'+(.65+destGlow*.35)+')';ctx.beginPath();ctx.arc(d.x,d.y,5+destGlow*2.5,0,7);ctx.fill();
+  // labels
+  if(!narrow){ctx.font='11px "JetBrains Mono",ui-monospace,monospace';ctx.fillStyle='rgba(255,255,255,.4)';ctx.textAlign='center';ctx.fillText('burner · one-time key',s0.x,s0.y+34);ctx.fillText('coin · minted',d.x,d.y+40)}
+  // packets with a glowing trail and a tx label
+  packets.forEach(function(p){for(var k=9;k>=1;k--){var tt=p.t-k*0.012;if(tt<0)continue;var q=pt(tt);ctx.fillStyle='rgba(255,'+(150+k*8)+',50,'+(.05+(10-k)*.035)+')';ctx.beginPath();ctx.arc(q.x,q.y,3.2-k*.18,0,7);ctx.fill()}
+    var h=pt(p.t),hc=.45+.55*cen(h.x);glowDot(h.x,h.y,16,'rgba(255,170,60,'+(.7*hc)+')');ctx.fillStyle='rgba(255,255,255,'+hc+')';ctx.beginPath();ctx.arc(h.x,h.y,2.8,0,7);ctx.fill();
+    if(!narrow){ctx.font='10.5px "JetBrains Mono",ui-monospace,monospace';ctx.textAlign='center';ctx.fillStyle='rgba(255,200,130,'+(.25+.5*cen(h.x))+')';ctx.fillText('tx '+p.id,h.x,h.y-14)}});
+}
+function frame(ts){if(!running)return;var dt=Math.min(.05,(ts-last)/1000||0);last=ts;step(dt);draw(ts/1000);requestAnimationFrame(frame)}
+function start(){if(running||reduce)return;if(!size())return;running=true;last=performance.now();requestAnimationFrame(frame)}
+function stop(){running=false}
+function still(){if(!size())return;blocks.forEach(function(b){b.glow=b.t<.5?.6:0});packets=[{t:.3,id:'5Nv9…'},{t:.72,id:'a91f…'}];draw(1)}
+if('IntersectionObserver' in window){new IntersectionObserver(function(es){var on=es[0].isIntersecting&&!document.hidden;if(reduce){if(es[0].isIntersecting)still();return}on?start():stop()}).observe(cv)}else if(reduce)still();else start();
+document.addEventListener('visibilitychange',function(){if(document.hidden)stop();else if(!reduce&&cv.offsetWidth)start()});
+window.addEventListener('resize',function(){if(running||reduce){size();if(reduce)still()}});
 })();
 </script>
 </body>
