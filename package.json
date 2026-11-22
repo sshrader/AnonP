@@ -6,14 +6,18 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "node server.js",
-    "test": "node test/burnerpad.test.js"
+    "test": "node test/burnerpad.test.js",
+    "dbc-config": "node --env-file=.env scripts/dbc-config.mjs"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@pump-fun/pump-sdk": "4.1.0",
     "@solana/web3.js": "^1.98.4",
     "bn.js": "^5.2.2",
     "buffer": "^6.0.3",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "@meteora-ag/dynamic-bonding-curve-sdk": "^1.5.13"
   }
 }

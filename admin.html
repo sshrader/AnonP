@@ -34,6 +34,11 @@ td.n{text-align:right;font-family:var(--mono)}
       <div class="row"><button class="btn" id="conn">Connect wallet</button><button class="btn pri" id="all" disabled>Pay out all ready coins</button><span class="muted small" id="who"></span></div>
       <div class="log" id="alog" style="margin-top:12px"></div><div class="err" id="aerr"></div>
     </div>
+    <div class="card" id="mcard" style="margin-bottom:16px" hidden><h2>Meteora platform fees</h2>
+      <p class="muted small" style="margin:0 0 12px">Your share of trading fees on Meteora coins is built into the curve config. Only the config's fee claimer wallet can claim it: <span class="mono" id="mclaimer">…</span></p>
+      <div class="stats" style="margin:0 0 12px"><div class="stat"><small>Waiting to claim</small><b id="mwait">…</b></div><div class="stat"><small>Pools</small><b id="mpools">…</b></div></div>
+      <div class="row"><button class="btn pri" id="mclaim" disabled>Claim all</button><span class="muted small" id="mmsg"></span></div><div class="log" id="mlog" style="margin-top:10px"></div>
+    </div>
     <div class="tw"><table><thead><tr><th>Coin</th><th>Venue</th><th>Launched</th><th class="n">Platform share</th><th class="n">Waiting in coin</th><th class="n">Platform part</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
     <p class="muted small" style="margin-top:12px">"Waiting in coin" is what the coin's vault holds now. "Platform part" is that amount times the platform share signed for the coin. Fees already paid out are not listed here; they are in the platform wallet.</p>
   </div>
@@ -57,7 +62,16 @@ $('enter').onclick=function(){ss('bp.admin',$('tok').value.trim());$('tok').valu
 $('tok').addEventListener('keydown',function(e){if(e.key==='Enter')$('enter').click()});
 $('lock').onclick=function(){ss('bp.admin',null);D=null;$('dash').hidden=true;$('gate').hidden=false};
 $('refresh').onclick=function(){fees={};load()};
+var M=null;
+function readMeteora(){
+  if(!D.dbcConfig){$('mcard').hidden=true;return}$('mcard').hidden=false;
+  if(!B()){setTimeout(readMeteora,500);return}
+  B().meteoraPartnerFees(D.cluster,D.dbcConfig).then(function(m){M=m;$('mclaimer').textContent=m.claimer||'unknown';var t=m.rows.reduce(function(a,r){return a+r.sol},0);$('mwait').textContent=t.toFixed(6)+' SOL';$('mpools').textContent=m.rows.length;mbtn()},function(e){$('mmsg').textContent='Could not read: '+e.message})}
+function mbtn(){var ok=M&&pay&&M.claimer&&pay.address===M.claimer&&M.rows.some(function(r){return r.sol>0});$('mclaim').disabled=!(ok&&!busy);$('mmsg').textContent=!pay?'Connect the fee claimer wallet below.':M&&M.claimer&&pay.address!==M.claimer?'The connected wallet is not the fee claimer.':''}
+$('mclaim').onclick=function(){if(busy||!M||!pay)return;busy=true;$('mclaim').disabled=true;$('mlog').textContent='';var i=0,rows=M.rows.filter(function(r){return r.sol>0});
+  (function nx(){if(i>=rows.length){busy=false;readMeteora();return}var r=rows[i++];B().claimMeteoraPartnerFees({cluster:D.cluster,wallet:pay.wallet,user:pay.address,pool:r.pool,raw:r.raw},function(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('mlog').appendChild(row);return function(st,d,hr){row.className=st==='ok'?'ok':st==='warn'?'warn':'err';row.firstChild.textContent=st==='ok'?'✓':st==='warn'?'!':'✕';row.lastChild.textContent=label+(d?' — '+d:'')}}).then(nx,function(e){busy=false;$('mmsg').textContent=e&&e.message||'Claim failed.';mbtn()})})()};
 function readFees(){
+  readMeteora();
   if(!B()){setTimeout(readFees,500);return}
   var list=D.launches.filter(function(l){return l.split&&l.platformBps>0}),i=0;
   function next(){if(i>=list.length){draw();return}var batch=list.slice(i,i+4);i+=4;Promise.all(batch.map(function(l){return B().distributableFees(D.cluster,l.mint).then(function(f){fees[l.mint]=f},function(){fees[l.mint]={err:1}})})).then(function(){draw();next()})}
@@ -70,11 +84,11 @@ function draw(){
   [['Coins launched',L.length],['With platform fee',withFee.length],['Waiting in coins',waiting.toFixed(4)+' SOL'],['Platform part waiting',mine.toFixed(6)+' SOL'],['Ready to pay out',ready],['Platform wallet',D.balance!=null?D.balance.toFixed(4)+' SOL':(D.platform&&D.platform.wallet?'…':'not set')]].forEach(function(x){st.appendChild(h('div',{class:'stat'},[h('small',{text:x[0]}),h('b',{text:String(x[1])})]))});
   var rows=$('rows');rows.textContent='';
   if(!L.length)rows.appendChild(h('tr',{},[h('td',{colspan:'8',class:'muted',text:'No launches yet.'})]));
-  L.forEach(function(l){var f=fees[l.mint],has=l.split&&l.platformBps>0,status=!has?'No platform fee':!f?'Reading…':f.err?'Unreadable':f.canDistribute?'Ready':'Below minimum';
+  L.forEach(function(l){var f=fees[l.mint],has=l.split&&l.platformBps>0,status=l.venue==='meteora'?'Built into curve':!has?'No platform fee':!f?'Reading…':f.err?'Unreadable':f.canDistribute?'Ready':'Below minimum';
     var btn=h('button',{class:'btn sm',type:'button',text:'Pay out'});btn.disabled=!(f&&f.canDistribute&&pay&&!busy);btn.onclick=function(){run([l])};
     rows.appendChild(h('tr',{},[h('td',{},[h('a',{href:'/coin/'+l.mint,style:'text-decoration:underline',text:l.name+' $'+l.symbol})]),h('td',{text:l.venue}),h('td',{text:ago(l.at)}),h('td',{class:'n',text:has?(l.platformBps/100)+'%':'–'}),h('td',{class:'n',text:f&&!f.err?f.sol.toFixed(6):'–'}),h('td',{class:'n',text:f&&!f.err?(f.sol*l.platformBps/10000).toFixed(6):'–'}),h('td',{text:status}),h('td',{},[btn])]))});
   $('all').disabled=!(pay&&!busy&&ready>0)}
-$('conn').onclick=function(){var p=window.phantom&&window.phantom.solana||window.solana;if(!p)return $('aerr').textContent='No Solana wallet found in this browser.';p.connect().then(function(r){pay={wallet:p,address:r.publicKey.toString()};$('who').textContent='Paying network fees from '+short(pay.address);$('aerr').textContent='';draw()},function(e){$('aerr').textContent=e&&e.message||'Cancelled.'})};
+$('conn').onclick=function(){var p=window.phantom&&window.phantom.solana||window.solana;if(!p)return $('aerr').textContent='No Solana wallet found in this browser.';p.connect().then(function(r){pay={wallet:p,address:r.publicKey.toString()};mbtn();$('who').textContent='Paying network fees from '+short(pay.address);$('aerr').textContent='';draw()},function(e){$('aerr').textContent=e&&e.message||'Cancelled.'})};
 function logStep(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('alog').appendChild(row);return function(state,detail,href){row.className=state==='ok'?'ok':state==='warn'?'warn':'err';row.firstChild.textContent=state==='ok'?'✓':state==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(detail){sp.appendChild(document.createTextNode(' — '));if(href)sp.appendChild(h('a',{href:href,target:'_blank',rel:'noopener',text:detail}));else sp.appendChild(document.createTextNode(detail))}}}
 function run(list){if(busy||!pay)return;busy=true;$('aerr').textContent='';$('alog').textContent='';draw();var i=0;
   (function nx(){if(i>=list.length){busy=false;fees={};setTimeout(function(){readFees()},2500);draw();return}var l=list[i++];$('alog').appendChild(h('div',{class:'muted small',text:l.name+' $'+l.symbol}));B().distributeCoinFees({cluster:D.cluster,wallet:pay.wallet,user:pay.address,mint:l.mint},logStep).then(nx,function(e){$('aerr').textContent=l.name+': '+(e&&e.message||'failed');busy=false;draw()})})()}

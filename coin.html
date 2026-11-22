@@ -39,6 +39,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}td{padding:7px 0;bord
 </div></header>
 <main class="wrap" id="main"><p class="skel" style="padding:40px 0">Loading…</p></main>
 <footer><div class="wrap">These checks read public chain data. They describe what is there; they are not a safety rating. Do your own research.</div></footer>
+<script src="/launch.js" defer></script>
 <script>
 (function(){
 'use strict';
@@ -50,6 +51,9 @@ function ago(t){var s=(Date.now()-t)/1000;if(s<60)return 'just now';if(s<3600)re
 function fx(n,d){return n==null?'–':Number(n).toLocaleString('en-US',{maximumFractionDigits:d==null?2:d})}
 function stat(l,v){return h('div',{class:'stat'},[h('small',{text:l}),h('b',{text:v})])}
 function explorer(c,path){return 'https://explorer.solana.com/'+path+(c==='devnet'?'?cluster=devnet':'')}
+function meteoraFill(j,mc,ph){
+  var tries=0;(function go(){if(!window.BurnerLaunch){if(tries++<40)return setTimeout(go,250);ph.textContent='Curve data is not available right now.';return}
+    window.BurnerLaunch.meteoraCurve(j.cluster,j.pool).then(function(m){ph.remove();var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(m.mcSol,1)+' SOL'));st.appendChild(stat('Price',fx(m.priceSol,9)+' SOL'));st.appendChild(stat('Curve',m.migrated?'Graduated':fx(m.progress,1)+'%'));st.appendChild(stat('Pool',j.pool.slice(0,4)+'…'+j.pool.slice(-4)));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,m.progress||0)+'%'})]))},function(){ph.textContent='Curve data is not available right now.'})})()}
 function render(j){
   var n=document.getElementById('net');n.textContent=j.cluster==='mainnet'?'Mainnet':'Devnet';if(j.cluster==='mainnet')n.className='net main';
   document.title=j.name+' ($'+j.symbol+') · BurnerPad';
@@ -69,11 +73,12 @@ function render(j){
   // market
   var mc=h('div',{class:'card'},[h('h2',{text:'Market'})]);
   if(oc.curve){var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(oc.curve.marketCapSol,1)+' SOL'));st.appendChild(stat('Raised',fx(oc.curve.raisedSol,2)+' SOL'));st.appendChild(stat('Curve',oc.curve.complete?'Graduated':fx(oc.curve.progress,1)+'%'));st.appendChild(stat('Holders',oc.holderCount!=null?fx(oc.holderCount,0):'–'));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,oc.curve.progress||0)+'%'})]))}
+  else if(j.venue==='meteora'&&j.pool){var mph=h('p',{class:'muted small',style:'margin:0',text:'Reading the curve…'});mc.appendChild(mph);meteoraFill(j,mc,mph)}
   else mc.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Curve data is not available right now.'}));
   right.appendChild(mc);
   // links
   var lc=h('div',{class:'card'},[h('h2',{text:'Links'})]);var lk=h('div',{class:'links'});
-  lk.appendChild(h('a',{class:'btn sm',href:'https://pump.fun/coin/'+j.mint,target:'_blank',rel:'noopener',text:'pump.fun'}));
+  if(j.venue==='pump')lk.appendChild(h('a',{class:'btn sm',href:'https://pump.fun/coin/'+j.mint,target:'_blank',rel:'noopener',text:'pump.fun'}));else lk.appendChild(h('a',{class:'btn sm',href:'https://jup.ag/tokens/'+j.mint,target:'_blank',rel:'noopener',text:'Jupiter'}));
   lk.appendChild(h('a',{class:'btn sm',href:explorer(j.cluster,'address/'+j.mint),target:'_blank',rel:'noopener',text:'Explorer'}));
   lk.appendChild(h('a',{class:'btn sm',href:explorer(j.cluster,'tx/'+j.signature),target:'_blank',rel:'noopener',text:'Launch tx'}));
   if(j.twitter)lk.appendChild(h('a',{class:'btn sm',href:j.twitter,target:'_blank',rel:'noopener nofollow',text:'X'}));

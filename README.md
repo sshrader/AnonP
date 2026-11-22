@@ -3,7 +3,7 @@
 A non-custodial token launcher. Launch from a **fresh one-time wallet** that your browser creates and you fund yourself.
 
 - **No pool, no custody.** BurnerPad never holds funds and never sees a private key. The burner's key is generated in the browser and stays there.
-- **Multi-venue.** pump.fun is live. Meteora and Raydium LaunchLab are listed as "soon" until their SDKs are integrated and tested.
+- **Multi-venue.** pump.fun is live. Meteora (Dynamic Bonding Curve) goes live once you create its curve config and set `DBC_CONFIG`. Raydium LaunchLab is listed as "soon".
 - **Clear fee.** A platform share of creator fees is set by a fee-split transaction the creator signs. It is shown before launch and on the coin page. Nothing is taken from your buy.
 - **Public trust checks** on every coin page: mint and freeze authority, creator holdings, top-10 concentration, launch-block buyers. They describe what is on-chain; they are not a safety rating.
 
@@ -34,7 +34,18 @@ Defaults to devnet. Set `CLUSTER=mainnet` and `RPC_URL` for mainnet. Test on dev
 | `PUBLIC_URL` | Public origin, used in metadata links. |
 | `DATA_DIR` | Where metadata, images and the launch list are stored (use a volume). |
 | `ADMIN_TOKEN` | Turns on `/admin` (platform fees overview and payouts). Use a long random value. Without it the page and its API are off. |
+| `DBC_CONFIG` | Address of the Meteora curve config (printed by `npm run dbc-config`). Setting it turns the Meteora venue on. |
+| `DBC_FEE_BPS`, `DBC_CREATOR_FEE_PCT` | Display only: the trading fee and the creator's share, shown on the launch page. The real values are in the on-chain config. |
 | `BLOCKED_WORDS` | Extra comma-separated words to reject in names and descriptions. |
+
+## Meteora setup
+
+1. Make a key file for a throwaway deployer wallet (keep it outside the repo) and fund it with a little SOL. On mainnet also pick a hardware wallet or multisig address to be the **fee claimer**.
+2. Look at the numbers first: `PARTNER_KEYPAIR=... npm run dbc-config -- --check`. Defaults mimic pump.fun: starts at a 30 SOL market cap, graduates at 410 SOL (about 85 SOL of buys fills it), 1% trading fee. Tune with `DBC_INITIAL_MC`, `DBC_MIGRATION_MC`, `DBC_FEE_BPS`, `DBC_CREATOR_FEE_PCT` (creator share of the fee after Meteora's 20% cut; default 90).
+3. Create it: `npm run dbc-config` (devnet), or add `--confirm-mainnet`. **On mainnet the config is permanent.**
+4. Set `DBC_CONFIG` (and the display values it prints) on the server and redeploy.
+
+Fees on Meteora coins are built into the config, so there is no fee-split transaction. Creators claim theirs on the Claim fees page; the platform claims its share on `/admin` with the fee claimer wallet.
 
 ## Claim fees and admin
 
@@ -51,4 +62,4 @@ Defaults to devnet. Set `CLUSTER=mainnet` and `RPC_URL` for mainnet. Test on dev
 
 ## Status
 
-Server, pages and tests pass locally. The browser bundle, the on-chain launch, the fee split and the sweep have not been run against a live network from the development sandbox. Run a devnet launch before mainnet.
+Server, pages and tests pass locally. The browser bundle, the on-chain launches (pump.fun and Meteora), the fee split, the Meteora fee claims and the sweep have not been run against a live network from the development sandbox. Run a devnet launch before mainnet.

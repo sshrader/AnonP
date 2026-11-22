@@ -5,6 +5,7 @@ import {
   VersionedTransaction, LAMPORTS_PER_SOL, SystemProgram
 } from '@solana/web3.js';
 import BN from 'bn.js';
+import { DynamicBondingCurveClient, getPriceFromSqrtPrice } from '@meteora-ag/dynamic-bonding-curve-sdk';
 import { PUMP_SDK, OnlinePumpSdk, getBuyTokenAmountFromSolAmount, feeSharingConfigPda } from '@pump-fun/pump-sdk';
 
 // The pump program is deployed on devnet at the same address as mainnet.
@@ -680,4 +681,117 @@ export function burnerFromString(str) {
   for (let i = 0; i < hex.length / 2; i++) bytes[zeros + i] = parseInt(hex.substr(i * 2, 2), 16);
   if (bytes.length !== 64) throw new Error('That is not a 64-byte private key.');
   return burnerFromSecret(bytes);
+}
+
+// ---------- Meteora (Dynamic Bonding Curve) ----------
+// A Meteora coin is a pool made from ONE config that the platform created once (scripts/dbc-config.mjs). The trading fee and
+// its split between creator and platform live in that config, so the protocol enforces them on every trade.
+const dbc = (conn) => new DynamicBondingCurveClient(conn, 'confirmed');
+const fieldsOf = (account) => (account && account.poolState) || account;
+const lam = (b) => Number(b.toString()) / LAMPORTS_PER_SOL;
+
+export async function createCoinMeteora({ cluster, wallet, user, name, symbol, uri, devBuySol, dbcConfig }, step) {
+  const cfg = config(cluster);
+  const conn = new Connection(cfg.rpc, 'confirmed');
+  const userKey = new PublicKey(user);
+  const configKey = new PublicKey(dbcConfig);
+  const mint = Keypair.generate();
+  await phase(step, 'Network check', async (done) => {
+    await checkNetwork(conn, cfg);
+    const sol = (await conn.getBalance(userKey)) / LAMPORTS_PER_SOL, need = 0.05 + (devBuySol || 0);
+    if (sol < need) throw new Error('Balance is ' + sol.toFixed(3) + ' SOL. A ' + (devBuySol || 0) + ' SOL first buy plus fees needs about ' + need.toFixed(2) + ' SOL.');
+    done('ok', cfg.label + ', balance ' + sol.toFixed(3) + ' SOL');
+  });
+  const built = await phase(step, 'Build create transaction', async (done) => {
+    const client = dbc(conn);
+    const createPoolParam = { baseMint: mint.publicKey, config: configKey, name, symbol, uri, payer: userKey, poolCreator: userKey };
+    let tx, buyTx = null;
+    if (devBuySol && devBuySol > 0) {
+      // The pool and the creator's buy go in one transaction, so nobody can buy before the creator.
+      const svc = [client.pool, client.creator].find((x) => x && typeof x.createPoolWithFirstBuy === 'function');
+      if (!svc) throw new Error('This version of the Meteora SDK cannot do a first buy at launch.');
+      const out = await svc.createPoolWithFirstBuy({
+        createPoolParam,
+        firstBuyParam: { buyer: userKey, receiver: userKey, buyAmount: new BN(Math.round(devBuySol * 1e9)), minimumAmountOut: new BN(0), referralTokenAccount: null }
+      });
+      tx = out.createPoolTx || out;
+      buyTx = out.swapBuyTx || null;
+    } else {
+      tx = await client.creator.createPool(createPoolParam);
+    }
+    tx.feePayer = userKey;
+    tx.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+    done('ok', 'Mint ' + mint.publicKey.toBase58(), explorerAddress(cfg, mint.publicKey.toBase58()));
+    return { tx, buyTx };
+  });
+  const signature = await signAndSend({ step, conn, cfg, wallet, tx: built.tx, extraSigner: mint, labels: { dry: 'Dry run', sign: 'Sign', send: 'Send and confirm' } });
+  const result = { signature, mint: mint.publicKey.toBase58(), pool: '', buySignature: built.buyTx ? null : signature, buyError: null, atomic: !built.buyTx };
+  result.pool = await phase(step, 'Find pool', async (done) => {
+    let p = null;
+    for (let i = 0; i < 8 && !p; i++) {
+      try { p = await dbc(conn).state.getPoolByBaseMint(mint.publicKey); } catch (e) { p = null; }
+      if (!p) await wait(1500);
+    }
+    if (!p) throw new Error('The coin was created but its pool could not be read yet. It is safe; reload the coin page in a minute.');
+    const addr = (p.publicKey || p.address).toBase58();
+    done('ok', addr.slice(0, 4) + '…' + addr.slice(-4));
+    return addr;
+  }).catch(() => '');
+  if (built.buyTx) {
+    try {
+      built.buyTx.feePayer = userKey;
+      built.buyTx.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+      result.buySignature = await signAndSend({ step, conn, cfg, wallet, tx: built.buyTx, labels: { dry: 'Dry run (first buy)', sign: 'Sign first buy', send: 'Send first buy' } });
+    } catch (e) { result.buyError = message(e); }
+  }
+  return result;
+}
+
+// Market cap and curve progress of a Meteora pool, read in the browser (the server has no SDK).
+export async function meteoraCurve(cluster, poolAddress) {
+  const cfg = config(cluster);
+  const client = dbc(new Connection(cfg.rpc, 'confirmed'));
+  const raw = await client.state.getPool(poolAddress);
+  const f = fieldsOf((raw && raw.account) || raw);
+  if (!f) throw new Error('No pool');
+  const priceSol = getPriceFromSqrtPrice(f.sqrtPrice, TOKEN_DECIMALS, 9).toNumber();
+  const progress = await client.state.getPoolQuoteTokenCurveProgress(poolAddress).catch(() => 0);
+  return { priceSol, mcSol: priceSol * 1e9, progress: Math.round(progress * 1000) / 10, migrated: f.isMigrated !== 0 };
+}
+
+// Fees waiting for a creator, per pool (SOL).
+export async function meteoraCreatorFees(cluster, creator) {
+  const client = dbc(new Connection(config(cluster).rpc, 'confirmed'));
+  const rows = await client.state.getPoolsFeesByCreator(new PublicKey(creator));
+  return rows.map((r) => ({ pool: r.poolAddress.toBase58(), raw: r.creatorQuoteFee, sol: lam(r.creatorQuoteFee) }));
+}
+export async function claimMeteoraCreatorFees({ cluster, wallet, user, pool, raw }, step) {
+  const cfg = config(cluster), conn = new Connection(cfg.rpc, 'confirmed'), userKey = new PublicKey(user);
+  const tx = await phase(step, 'Build claim', async (done) => {
+    const t = await dbc(conn).creator.claimCreatorTradingFee({ creator: userKey, payer: userKey, pool: new PublicKey(pool), maxBaseAmount: new BN(0), maxQuoteAmount: raw });
+    t.feePayer = userKey; t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+    done('ok', 'Claiming about ' + lam(raw).toFixed(6) + ' SOL');
+    return t;
+  });
+  return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } });
+}
+
+// The platform's share, for the admin page: every pool made from the config, and who may claim.
+export async function meteoraPartnerFees(cluster, dbcConfig) {
+  const client = dbc(new Connection(config(cluster).rpc, 'confirmed'));
+  const key = new PublicKey(dbcConfig);
+  const c = await client.state.getPoolConfig(key);
+  const cc = (c && c.account) || c;
+  const rows = await client.state.getPoolsFeesByConfig(key);
+  return { claimer: cc && cc.feeClaimer ? cc.feeClaimer.toBase58() : '', rows: rows.map((r) => ({ pool: r.poolAddress.toBase58(), raw: r.partnerQuoteFee, sol: lam(r.partnerQuoteFee), total: lam(r.totalTradingQuoteFee) })) };
+}
+export async function claimMeteoraPartnerFees({ cluster, wallet, user, pool, raw }, step) {
+  const cfg = config(cluster), conn = new Connection(cfg.rpc, 'confirmed'), userKey = new PublicKey(user);
+  const tx = await phase(step, 'Build claim', async (done) => {
+    const t = await dbc(conn).partner.claimPartnerTradingFee({ pool: new PublicKey(pool), feeClaimer: userKey, payer: userKey, maxBaseAmount: new BN(0), maxQuoteAmount: raw });
+    t.feePayer = userKey; t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+    done('ok', 'Claiming about ' + lam(raw).toFixed(6) + ' SOL');
+    return t;
+  });
+  return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (claim)', sign: 'Sign claim', send: 'Send claim' } });
 }

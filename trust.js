@@ -31,7 +31,9 @@ function trustChecks(oc, rec) {
       l.early + ' other buy' + (l.early === 1 ? '' : 's') + ' in the first two blocks' + (l.checked < l.early ? ' (first ' + l.checked + ' checked)' : '') + '; those wallets still hold ' + fmt(held) + '.');
   }
 
-  if (rec) {
+  if (rec && rec.venue === 'meteora') {
+    add('fees', 'Platform fee', 'ok', 'Built into this pool\'s curve config on Meteora. It applies to every trade and the creator cannot change it.');
+  } else if (rec) {
     if (!rec.platformBps) add('fees', 'Platform fee', 'ok', 'None. BurnerPad takes no share of this coin\'s creator fees.');
     else add('fees', 'Platform fee', rec.split ? 'ok' : 'warn',
       rec.split ? 'A ' + (rec.platformBps / 100) + '% share of creator fees was signed on-chain by the creator.' : 'The fee split was not completed, so creator fees go entirely to the creator wallet.');

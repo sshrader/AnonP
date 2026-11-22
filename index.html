@@ -224,7 +224,7 @@ function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
 function ago(t){var s=(Date.now()-t)/1000;if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
 function copy(text,btn){var done=function(){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o},1200)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,function(){});else done()}
 
-var S={cluster:'devnet',platform:null,venues:[],venue:'pump',filter:'',mode:'burner',burner:null,phantom:null,bal:0,imgData:'',saved:false,busy:false,maxBuy:5};
+var S={meteora:null,cluster:'devnet',platform:null,venues:[],venue:'pump',filter:'',mode:'burner',burner:null,phantom:null,bal:0,imgData:'',saved:false,busy:false,maxBuy:5};
 
 // ---------- routing ----------
 function route(){var v=(location.hash||'#explore').slice(1);if(['explore','launch','claim','how'].indexOf(v)<0)v='explore';['explore','launch','claim','how'].forEach(function(n){$('v-'+n).hidden=n!==v;$('nav-'+n).className=n===v?'on':''});if(v==='explore')loadGrid();if(v==='launch')updateAll();if(v==='claim')claimInit()}
@@ -237,7 +237,7 @@ function drawTicker(list){var t=$('ticker'),k=$('trk');if(!list.length){t.hidden
 function loadGrid(){api('/api/launches?venue='+encodeURIComponent(S.filter)+'&q='+encodeURIComponent($('q').value)).then(function(j){if(!S.filter&&!$('q').value)drawTicker(j.launches);var g=$('grid');g.textContent='';if(!j.launches.length){g.className='';g.appendChild(h('div',{class:'empty',text:$('q').value||S.filter?'Nothing matches.':'No launches yet. Be the first.'}));return}g.className='grid';j.launches.forEach(function(l,i){var a=h('a',{class:'tile rise',href:'/coin/'+l.mint,style:'animation-delay:'+Math.min(i,12)*0.04+'s'});var img=h('img',{alt:'',loading:'lazy'});if(l.image)img.src=l.image;a.appendChild(img);var vn=(S.venues.filter(function(v){return v.id===l.venue})[0]||{}).name||l.venue;a.appendChild(h('div',{class:'t'},[h('b',{text:l.name}),h('span',{class:'mono muted small',text:'$'+l.symbol}),h('span',{class:'meta'},[h('span',{class:'chip live',text:vn}),l.burner?h('span',{class:'chip',text:'burner'}):'',h('span',{class:'muted small',text:ago(l.at)})])]));g.appendChild(a)})}).catch(function(e){$('grid').textContent=e.message})}
 
 // ---------- launch: venue ----------
-function drawVenues(){var v=$('venues');v.textContent='';S.venues.forEach(function(x){var b=h('button',{class:'venue'+(S.venue===x.id?' on':''),type:'button'},[h('b',{text:x.name}),h('span',{text:x.live?x.blurb:'Coming soon'})]);if(!x.live)b.disabled=true;b.onclick=function(){S.venue=x.id;drawVenues()};v.appendChild(b)})}
+function drawVenues(){var v=$('venues');v.textContent='';S.venues.forEach(function(x){var b=h('button',{class:'venue'+(S.venue===x.id?' on':''),type:'button'},[h('b',{text:x.name}),h('span',{text:x.live?x.blurb:'Coming soon'})]);if(!x.live)b.disabled=true;b.onclick=function(){S.venue=x.id;drawVenues();updateAll()};v.appendChild(b)})}
 
 // ---------- launch: image ----------
 $('img').addEventListener('change',function(){var f=this.files[0];if(!f)return;if(f.size>3*1024*1024){fail('That image is over 3 MB.');this.value='';return}var r=new FileReader();r.onload=function(){S.imgData=r.result;$('prev').src=r.result;$('prev').style.display='block';$('ph').style.display='none';$('imgname').textContent=f.name;fail('');updateAll()};r.readAsDataURL(f)});
@@ -277,17 +277,18 @@ function drawPhantom(){var box=$('m-phantom');box.textContent='';var p=window.ph
   var b=h('button',{class:'btn pri',type:'button',text:'Connect wallet'});b.onclick=function(){p.connect().then(function(r){S.phantom={address:r.publicKey.toString(),provider:p};drawPhantom();updateAll()},function(e){fail(e&&e.message||'Connection cancelled.')})};box.appendChild(b)}
 
 // ---------- launch: summary ----------
-function feeBps(){return S.platform?S.platform.bps:0}
+function feeBps(){return S.venue==='pump'&&S.platform?S.platform.bps:0}
+function mFee(){var m=S.meteora;if(!m)return null;var tot=m.feeBps/100;return{trade:tot,you:+(tot*0.8*m.creatorPct/100).toFixed(3)}}
 function updateAll(){
   var buy=Math.max(0,+$('buy').value||0);var t=$('sum');t.textContent='';
   function row(a,b){var tr=h('tr',{},[h('td',{text:a}),h('td',{text:b})]);t.appendChild(tr)}
   row('Venue',(S.venues.filter(function(v){return v.id===S.venue})[0]||{}).name||'pump.fun');
   row('First buy',buy.toFixed(3)+' SOL');
   row('Network fees and rent','~'+(S.cluster==='mainnet'?'0.04':'0.06')+' SOL');
-  row('BurnerPad fee',feeBps()?(feeBps()/100)+'% of creator fees':'none');
-  var fn=$('feenote');fn.textContent=feeBps()?('BurnerPad takes '+(feeBps()/100)+'% of the coin\'s ongoing creator fees. It is set in a fee-split transaction that you sign and that anyone can read on-chain. Nothing is taken from your buy.'):'No platform fee is set on this server.';
+  if(S.venue==='meteora'&&mFee())row('Trading fee',mFee().trade+'% per trade');else row('BurnerPad fee',feeBps()?(feeBps()/100)+'% of creator fees':'none');
+  var fn=$('feenote');if(S.venue==='meteora'&&mFee())fn.textContent='Every trade pays a '+mFee().trade+'% fee. Meteora keeps 20% of it. You, as the creator, earn about '+mFee().you+'% of every trade; the platform gets the rest. This is built into the curve, so nothing extra is signed and nothing is taken from your buy.';else fn.textContent=feeBps()?('BurnerPad takes '+(feeBps()/100)+'% of the coin\'s ongoing creator fees. It is set in a fee-split transaction that you sign and that anyone can read on-chain. Nothing is taken from your buy.'):'No platform fee is set on this server.';
   var rb=$('recipbox');
-  if(S.mode==='burner'){rb.hidden=false;if(!rb.firstChild){rb.appendChild(h('label',{for:'recip',text:'Creator fees go to'}));var sel=h('select',{id:'recip'});sel.appendChild(h('option',{value:'burner',text:'The burner wallet (claim with its key)'}));sel.appendChild(h('option',{value:'custom',text:'Another address I enter'}));rb.appendChild(sel);var inp=h('input',{id:'recipaddr',placeholder:'Solana address',hidden:'',style:'margin-top:8px'});rb.appendChild(inp);rb.appendChild(h('div',{class:'muted small',style:'margin-top:6px',text:'Sending fees to a wallet you own links it to the burner on-chain.'}));sel.onchange=function(){inp.hidden=sel.value!=='custom'}}}else rb.hidden=true;
+  if(S.mode==='burner'&&S.venue==='pump'){rb.hidden=false;if(!rb.firstChild){rb.appendChild(h('label',{for:'recip',text:'Creator fees go to'}));var sel=h('select',{id:'recip'});sel.appendChild(h('option',{value:'burner',text:'The burner wallet (claim with its key)'}));sel.appendChild(h('option',{value:'custom',text:'Another address I enter'}));rb.appendChild(sel);var inp=h('input',{id:'recipaddr',placeholder:'Solana address',hidden:'',style:'margin-top:8px'});rb.appendChild(inp);rb.appendChild(h('div',{class:'muted small',style:'margin-top:6px',text:'Sending fees to a wallet you own links it to the burner on-chain.'}));sel.onchange=function(){inp.hidden=sel.value!=='custom'}}}else rb.hidden=true;
   var ready=!S.busy&&!!S.imgData&&$('name').value.trim()&&$('sym').value.trim();
   if(S.mode==='burner')ready=ready&&!!S.burner&&S.saved&&S.bal>=needSol();else ready=ready&&!!S.phantom;
   $('go').disabled=!ready;
@@ -310,14 +311,15 @@ $('go').addEventListener('click',function(){
     var bps=feeBps(),sh=null;
     if(S.platform&&bps&&S.platform.wallet!==recip){sh=[{address:recip,shareBps:10000-bps},{address:S.platform.wallet,shareBps:bps}]}
     else if(recip!==signer.address){sh=[{address:recip,shareBps:10000}]}
+    if(S.venue==='meteora')return B().createCoinMeteora({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,dbcConfig:S.meteora.config},step);
     return B().createCoin({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,shareholders:sh,allowSplitFallback:S.cluster==='devnet'},step)}).then(function(out){
       var d2=step('List on BurnerPad');
-      return api('/api/launched',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mint:out.mint,signature:out.signature,metaId:meta.id,venue:S.venue,splitSignature:out.splitSignature||'',burner:S.mode==='burner'})}).then(function(){d2('ok','Listed');finish(out)},function(e){d2('warn','Not listed: '+e.message);finish(out)})
+      return api('/api/launched',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mint:out.mint,signature:out.signature,metaId:meta.id,venue:S.venue,pool:out.pool||'',splitSignature:out.splitSignature||'',burner:S.mode==='burner'})}).then(function(){d2('ok','Listed');finish(out)},function(e){d2('warn','Not listed: '+e.message);finish(out)})
     }).catch(function(e){S.busy=false;fail(e&&e.message||'Launch failed.');updateAll()})});
 function finish(out){S.busy=false;var box=$('result');box.textContent='';var c=h('div',{class:'done'});c.appendChild(h('b',{text:'Launched.'}));c.appendChild(h('div',{class:'mono small',style:'margin:6px 0 10px;overflow-wrap:anywhere',text:out.mint}));
   if(out.splitError)c.appendChild(h('div',{class:'err small',text:'The fee split did not go through ('+out.splitError+'). Creator fees go only to the launching wallet.'}));
   if(out.buyError)c.appendChild(h('div',{class:'err small',text:'The first buy did not go through: '+out.buyError}));
-  var r=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});r.appendChild(h('a',{class:'btn pri sm',href:'/coin/'+out.mint,text:'Open coin page'}));r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:'https://pump.fun/coin/'+out.mint,text:'pump.fun'}));c.appendChild(r);
+  var r=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});r.appendChild(h('a',{class:'btn pri sm',href:'/coin/'+out.mint,text:'Open coin page'}));r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:S.venue==='pump'?'https://pump.fun/coin/'+out.mint:'https://jup.ag/tokens/'+out.mint,text:S.venue==='pump'?'pump.fun':'Jupiter'}));c.appendChild(r);
   if(S.mode==='burner'){var sw=h('div',{style:'margin-top:14px'});sw.appendChild(h('label',{text:'Sweep leftover SOL out of the burner (optional)'}));sw.appendChild(h('input',{id:'swto',placeholder:'Destination address'}));sw.appendChild(h('div',{class:'muted small',style:'margin:6px 0 8px',text:'This links the destination to the burner on-chain. Tokens you bought stay in the burner.'}));var sb=h('button',{class:'btn sm',type:'button',text:'Sweep SOL'});sb.onclick=function(){var to=$('swto').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to))return fail('Enter a valid destination address.');sb.disabled=true;B().sweep({cluster:S.cluster,burner:S.burner,to:to},logStep).then(function(){pollBal()},function(e){fail(e.message)}).then(function(){sb.disabled=false})};sw.appendChild(sb);c.appendChild(sw)}
   box.appendChild(c);updateAll()}
 
@@ -337,16 +339,17 @@ function loadClaims(){
   var sg=C.signer,box=$('ccoins');box.textContent='Loading…';var vb=$('cvaultbody');vb.textContent='';vb.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Reading…'}));
   B().creatorFees(S.cluster,sg.address).then(function(sol){vb.textContent='';vb.appendChild(h('div',{class:'bal',style:'margin-top:0'},[h('span',{class:'muted small',text:'Waiting'}),h('b',{text:sol.toFixed(6)+' SOL'})]));vb.appendChild(h('p',{class:'muted small',style:'margin:0 0 10px',text:'Fees from coins launched without a split. Sent to this wallet.'}));var cb=h('button',{class:'btn sm',type:'button',text:'Claim'});if(!(sol>0))cb.disabled=true;cb.onclick=function(){runClaim(cb,function(){return B().claimCreatorFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address},csay)})};vb.appendChild(cb)},function(e){vb.textContent='Could not read: '+e.message});
   api('/api/mycoins?wallet='+encodeURIComponent(sg.address)).then(function(j){box.textContent='';if(!j.coins.length){box.appendChild(h('div',{class:'empty',text:'No coins from BurnerPad were launched by this wallet.'}));return}
-    j.coins.forEach(function(c){var amt=h('span',{class:'amt muted',text:c.split?'…':'no split'});var btn=h('button',{class:'btn sm',type:'button',text:'Pay out'});btn.disabled=true;var img=h('img',{alt:''});if(c.image)img.src=c.image;
-      box.appendChild(h('div',{class:'crow'},[img,h('div',{class:'ci'},[h('b',{text:c.name}),h('span',{class:'mono',text:'$'+c.symbol+(c.platformBps?' · '+c.platformBps/100+'% platform':'')})]),amt,btn,h('a',{class:'btn sm',href:'/coin/'+c.mint,text:'Page'})]));
-      if(!c.split)return;
+    var mCoins=j.coins.filter(function(c){return c.venue==='meteora'});if(mCoins.length)B().meteoraCreatorFees(S.cluster,sg.address).then(function(rows){var by={};rows.forEach(function(r){by[r.pool]=r});mCoins.forEach(function(c){var r=by[c.pool],el=document.getElementById('mc-'+c.mint);if(!el)return;var amt=el.querySelector('.amt'),btn=el.querySelector('button');if(!r){amt.textContent='0 SOL';return}amt.textContent=r.sol.toFixed(6)+' SOL';amt.className='amt';btn.disabled=!(r.sol>0);btn.onclick=function(){runClaim(btn,function(){return B().claimMeteoraCreatorFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address,pool:c.pool,raw:r.raw},csay)})}})},function(){mCoins.forEach(function(c){var el=document.getElementById('mc-'+c.mint);if(el)el.querySelector('.amt').textContent='unreadable'})});
+    j.coins.forEach(function(c){var amt=h('span',{class:'amt muted',text:c.split?'…':'no split'});var isM=c.venue==='meteora';if(isM){amt.textContent='…'}var btn=h('button',{class:'btn sm',type:'button',text:isM?'Claim':'Pay out'});btn.disabled=true;var img=h('img',{alt:''});if(c.image)img.src=c.image;
+      var rowEl=h('div',{class:'crow',id:isM?'mc-'+c.mint:null},[img,h('div',{class:'ci'},[h('b',{text:c.name}),h('span',{class:'mono',text:'$'+c.symbol+(c.platformBps?' · '+c.platformBps/100+'% platform':'')})]),amt,btn,h('a',{class:'btn sm',href:'/coin/'+c.mint,text:'Page'})]);if(!isM)rowEl.removeAttribute('id');box.appendChild(rowEl);
+      if(isM||!c.split)return;
       B().distributableFees(S.cluster,c.mint).then(function(f){amt.textContent=f.sol.toFixed(6)+' SOL';amt.className='amt';btn.disabled=!f.canDistribute;btn.title=f.canDistribute?'':'Needs at least '+f.min.toFixed(6)+' SOL';if(!f.canDistribute)amt.textContent+=' (min '+f.min.toFixed(4)+')';btn.onclick=function(){runClaim(btn,function(){return B().distributeCoinFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address,mint:c.mint},csay)})}},function(){amt.textContent='unreadable'})})
   },function(e){box.textContent=e.message})}
 function runClaim(btn,fn){if(C.busy)return;C.busy=true;btn.disabled=true;$('clogcard').hidden=false;$('clog').textContent='';cfail('');fn().then(function(){setTimeout(loadClaims,2500)},function(e){cfail(e&&e.message||'That did not go through.')}).then(function(){C.busy=false})}
 
 // ---------- boot ----------
 function boot(){
-  api('/api/state').then(function(s){S.cluster=s.cluster;S.platform=s.platform;S.venues=s.venues;S.maxBuy=s.maxBuy;var n=$('net');n.textContent=s.cluster==='mainnet'?'Mainnet':'Devnet';if(s.cluster==='mainnet')n.className='net main';
+  api('/api/state').then(function(s){S.cluster=s.cluster;S.platform=s.platform;S.meteora=s.meteora;S.venues=s.venues;S.maxBuy=s.maxBuy;var n=$('net');n.textContent=s.cluster==='mainnet'?'Mainnet':'Devnet';if(s.cluster==='mainnet')n.className='net main';
     $('howfee').textContent=s.platform?'BurnerPad takes '+(s.platform.bps/100)+'% of a coin\'s creator fees, set by a fee-split transaction you sign at launch. Nothing is taken from your buy or your burner. Network fees and rent go to Solana, not to us.':'No platform fee is set on this server. Network fees and rent go to Solana.';
     drawFilters();drawVenues();route()},function(e){document.body.insertBefore(h('div',{class:'wrap',style:'padding:20px',text:e.message}),document.body.firstChild)});
   drawPhantom();

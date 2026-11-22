@@ -18,12 +18,14 @@ const B58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SIG_RE = /^[1-9A-HJ-NP-Za-km-z]{60,100}$/;
 const PUMP_PROGRAM = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 const RETRY_MS = Number(process.env.LAUNCH_RETRY_MS) || 1500;
-const VENUES = [
+// Meteora goes live once a curve config exists (scripts/dbc-config.mjs) and DBC_CONFIG is set.
+const dbcConfig = () => (B58_RE.test((process.env.DBC_CONFIG || '').trim()) ? process.env.DBC_CONFIG.trim() : '');
+const venues = () => [
   { id: 'pump', name: 'pump.fun', live: true, blurb: 'Bonding curve, graduates to PumpSwap.' },
-  { id: 'meteora', name: 'Meteora', live: false, blurb: 'Dynamic bonding curve. Coming soon.' },
+  { id: 'meteora', name: 'Meteora', live: !!dbcConfig(), blurb: dbcConfig() ? 'Dynamic bonding curve, graduates to a locked DAMM pool.' : 'Dynamic bonding curve. Coming soon.' },
   { id: 'raydium', name: 'Raydium LaunchLab', live: false, blurb: 'Bonding curve to Raydium. Coming soon.' },
 ];
-const liveVenue = (id) => VENUES.some((v) => v.id === id && v.live);
+const liveVenue = (id) => venues().some((v) => v.id === id && v.live);
 
 const cfg = () => {
   const bps = Number.isFinite(Number(process.env.PLATFORM_BPS)) && process.env.PLATFORM_BPS !== '' ? Math.round(Number(process.env.PLATFORM_BPS)) : 100;
@@ -164,7 +166,7 @@ function saveLaunches(c, d) { const f = launchesFile(c); fs.writeFileSync(f + '.
 
 // Reads a launch transaction from the chain: it succeeded, the new coin signed it, and it used the pump.fun program.
 // Returns the wallet that paid for it (the first signer).
-async function verifyLaunch(c, sig, mint) {
+async function verifyLaunch(c, sig, mint, venue, pool) {
   let tx = null;
   for (let i = 0; i < 6 && !tx; i++) {
     try { tx = await rpc(c, 'getTransaction', [sig, { encoding: 'json', commitment: 'confirmed', maxSupportedTransactionVersion: 0 }]); }
@@ -176,6 +178,11 @@ async function verifyLaunch(c, sig, mint) {
   let keys = ((msg && msg.accountKeys) || []).slice();
   if (tx.meta && tx.meta.loadedAddresses) keys = keys.concat(tx.meta.loadedAddresses.writable || [], tx.meta.loadedAddresses.readonly || []);
   const signers = keys.slice(0, (msg && msg.header && msg.header.numRequiredSignatures) || 1);
+  if (venue === 'meteora') {
+    // A Meteora launch: the new coin signed it, and it touches our curve config and the pool the page names.
+    if (!signers.includes(mint) || !keys.includes(dbcConfig()) || !B58_RE.test(pool || '') || !keys.includes(pool)) return { error: 'That transaction is not a Meteora launch from this platform\'s curve for this coin.' };
+    return { wallet: signers[0] };
+  }
   if (!signers.includes(mint) || !keys.includes(PUMP_PROGRAM)) return { error: 'That transaction is not a pump.fun launch for this coin.' };
   return { wallet: signers[0] };
 }
@@ -194,12 +201,14 @@ async function launched(req, res) {
   if (!liveVenue(venue)) return send(res, 400, { error: 'That venue is not live yet.' });
   const list = loadLaunches(c);
   if (list.some((l) => l.mint === mint)) return send(res, 409, { error: 'That coin is already listed.' });
-  const vr = await verifyLaunch(c, sig, mint);
+  const pool = text(b.pool, 60);
+  if (venue === 'meteora' && !B58_RE.test(pool)) return send(res, 400, { error: 'Missing pool address.' });
+  const vr = await verifyLaunch(c, sig, mint, venue, pool);
   if (vr.error) return send(res, 422, { error: vr.error });
   const meta = readMeta(id);
   const split = /^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(text(b.splitSignature, 120));
   const d = loadLaunches(c); // re-read before writing
-  d.unshift({ mint, signature: sig, wallet: vr.wallet, venue, name: meta.name, symbol: meta.symbol, metaId: id, image: imageIdOf(meta), at: Date.now(), split, platformBps: split ? cfg().platform.bps : 0, burner: !!b.burner });
+  d.unshift({ mint, signature: sig, wallet: vr.wallet, venue, name: meta.name, symbol: meta.symbol, metaId: id, image: imageIdOf(meta), at: Date.now(), pool: venue === 'meteora' ? pool : '', split: venue === 'meteora' ? false : split, platformBps: venue === 'meteora' ? 0 : (split ? cfg().platform.bps : 0), burner: !!b.burner });
   saveLaunches(c, d.slice(0, 5000));
   send(res, 200, { ok: true });
 }
@@ -223,7 +232,7 @@ async function coinInfo(res, mint) {
   let onchain;
   if (hit && Date.now() - hit.at < 45000) onchain = hit.data;
   else {
-    onchain = await chain.coinChain((method, params) => rpc(c, method, params), mint, rec.wallet, rpcUrl(c));
+    onchain = await chain.coinChain((method, params) => rpc(c, method, params), mint, rec.wallet, rpcUrl(c), { venue: rec.venue });
     coinCache.set(key, { at: Date.now(), data: onchain });
     if (coinCache.size > 200) coinCache.delete(coinCache.keys().next().value);
   }
@@ -232,7 +241,7 @@ async function coinInfo(res, mint) {
     cluster: c.cluster, mint, name: rec.name, symbol: rec.symbol, venue: rec.venue, creator: rec.wallet, burner: !!rec.burner,
     launchedAt: rec.at, signature: rec.signature, image: rec.image ? '/images/' + rec.image : '', description: meta.description || '',
     twitter: meta.twitter || '', telegram: meta.telegram || '', website: meta.website || '', split: !!rec.split, platformBps: rec.platformBps || 0,
-    onchain, trust: trustChecks(onchain, { split: rec.split, platformBps: rec.platformBps || 0 }),
+    pool: rec.pool || '', onchain, trust: trustChecks(onchain, { venue: rec.venue, split: rec.split, platformBps: rec.platformBps || 0 }),
   });
 }
 
@@ -241,7 +250,7 @@ function myCoinsApi(res, u) {
   const w = text(u.searchParams.get('wallet'), 60);
   if (!B58_RE.test(w)) return send(res, 400, { error: 'That is not a valid wallet address.' });
   const c = cfg();
-  const list = loadLaunches(c).filter((l) => l.wallet === w).slice(0, 100).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, image: l.image ? '/images/' + l.image : '' }));
+  const list = loadLaunches(c).filter((l) => l.wallet === w).slice(0, 100).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, venue: l.venue, pool: l.pool || '', at: l.at, split: !!l.split, platformBps: l.platformBps || 0, image: l.image ? '/images/' + l.image : '' }));
   send(res, 200, { cluster: c.cluster, coins: list });
 }
 
@@ -258,12 +267,14 @@ function adminLaunches(req, res) {
   if (limited('adminfail:' + clientIp(req), 20, true)) return send(res, 429, { error: 'Too many wrong tries. Wait an hour.' });
   if (!adminOk(req)) { limited('adminfail:' + clientIp(req), 20); return send(res, 401, { error: 'Wrong token.' }); }
   const c = cfg();
-  send(res, 200, { cluster: c.cluster, platform: c.platform, launches: loadLaunches(c).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, venue: l.venue, wallet: l.wallet, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, burner: !!l.burner })) });
+  send(res, 200, { cluster: c.cluster, platform: c.platform, dbcConfig: dbcConfig(), launches: loadLaunches(c).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, venue: l.venue, pool: l.pool || '', wallet: l.wallet, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, burner: !!l.burner })) });
 }
 
 function stateApi(res) {
   const c = cfg();
-  send(res, 200, { cluster: c.cluster, maxBuy: c.maxBuy, platform: c.platform.bps ? c.platform : null, venues: VENUES });
+  const feeBps = Number(process.env.DBC_FEE_BPS) || 100, creatorPct = process.env.DBC_CREATOR_FEE_PCT === undefined || process.env.DBC_CREATOR_FEE_PCT === '' ? 90 : Math.max(0, Math.min(100, Number(process.env.DBC_CREATOR_FEE_PCT)));
+  // The numbers below are shown on the site only. The real values live in the on-chain config.
+  send(res, 200, { cluster: c.cluster, maxBuy: c.maxBuy, platform: c.platform.bps ? c.platform : null, venues: venues(), meteora: dbcConfig() ? { config: dbcConfig(), feeBps, creatorPct } : null });
 }
 
 const RPC_METHODS = new Set(['getLatestBlockhash', 'getBlockHeight', 'getAccountInfo', 'getMultipleAccounts', 'getBalance', 'getSlot',

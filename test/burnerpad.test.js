@@ -115,6 +115,30 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   check('coin: unknown coin 404', (await call('GET', '/api/coin/' + addr())).status === 404);
 
 
+
+  // Meteora venue
+  check('meteora: not live without DBC_CONFIG', (await call('POST', '/api/launched', { mint: addr(), signature: sig, metaId, venue: 'meteora', pool: addr() })).status === 400);
+  const dbcConfigKey = addr(); process.env.DBC_CONFIG = dbcConfigKey; process.env.DBC_FEE_BPS = '100'; process.env.DBC_CREATOR_FEE_PCT = '90';
+  r = await call('GET', '/api/state');
+  check('meteora: live once configured, with fee numbers', r.json.venues.find((v) => v.id === 'meteora').live === true && r.json.meteora && r.json.meteora.config === dbcConfigKey && r.json.meteora.feeBps === 100 && r.json.meteora.creatorPct === 90);
+  const mMint = addr(), mPool = addr(), mSig = b58encode(crypto.randomBytes(64)), mPayer = addr();
+  r = await call('POST', '/api/launched', { mint: mMint, signature: mSig, metaId, venue: 'meteora', pool: mPool });
+  check('meteora: unknown transaction rejected', r.status === 422);
+  txs[mSig] = mkTx([mPayer, mMint], [dbcConfigKey, mPool, addr()]);
+  check('meteora: missing pool rejected', (await call('POST', '/api/launched', { mint: mMint, signature: mSig, metaId, venue: 'meteora' })).status === 400);
+  const noCfg = b58encode(crypto.randomBytes(64)); txs[noCfg] = mkTx([mPayer, mMint], [mPool, addr()]);
+  check('meteora: tx not using our config rejected', (await call('POST', '/api/launched', { mint: mMint, signature: noCfg, metaId, venue: 'meteora', pool: mPool })).status === 422);
+  const noPoolTx = b58encode(crypto.randomBytes(64)); txs[noPoolTx] = mkTx([mPayer, mMint], [dbcConfigKey, addr()]);
+  check('meteora: tx without the named pool rejected', (await call('POST', '/api/launched', { mint: mMint, signature: noPoolTx, metaId, venue: 'meteora', pool: mPool })).status === 422);
+  r = await call('POST', '/api/launched', { mint: mMint, signature: mSig, metaId, venue: 'meteora', pool: mPool, burner: true });
+  check('meteora: valid launch recorded', r.status === 200, JSON.stringify(r.json));
+  check('meteora: filter finds it', (await call('GET', '/api/launches?venue=meteora')).json.launches.length === 1);
+  r = await call('GET', '/api/mycoins?wallet=' + mPayer);
+  check('meteora: mycoins carries venue and pool', r.json.coins.length === 1 && r.json.coins[0].venue === 'meteora' && r.json.coins[0].pool === mPool);
+  r = await call('GET', '/api/coin/' + mMint);
+  const mt = Object.fromEntries(r.json.trust.map((x) => [x.id, x]));
+  check('meteora: coin api has pool and a built-in fee note', r.status === 200 && r.json.pool === mPool && r.json.venue === 'meteora' && /Built into/.test(mt.fees.detail), JSON.stringify(mt.fees));
+
   // my coins and admin
   r = await call('GET', '/api/mycoins?wallet=' + burner);
   check('mycoins: lists coins for that wallet', r.status === 200 && r.json.coins.length === 1 && r.json.coins[0].mint === mint && r.json.coins[0].split === true);
@@ -127,7 +151,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   check('admin api: no token is 401', (await adm('')).status === 401);
   check('admin api: wrong token is 401', (await adm('nope')).status === 401);
   r = await adm(process.env.ADMIN_TOKEN);
-  check('admin api: right token lists launches with wallets and platform share', r.status === 200 && r.json.launches.length === 1 && r.json.launches[0].wallet === burner && r.json.launches[0].platformBps === 100 && r.json.platform.wallet === platform, JSON.stringify(r.json).slice(0, 200));
+  const al = r.json.launches.find((x) => x.mint === mint); check('admin api: right token lists launches with wallets and platform share', r.status === 200 && r.json.launches.length === 2 && al && al.wallet === burner && al.platformBps === 100 && r.json.platform.wallet === platform && r.json.dbcConfig === dbcConfigKey, JSON.stringify(r.json).slice(0, 200));
 
   // trust.js on bad data
   const { trustChecks } = require('../trust.js');

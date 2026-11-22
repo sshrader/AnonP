@@ -89,7 +89,8 @@ async function launchScan(rpc, mint, dev) {
 }
 
 // rpc(method, params) returns the JSON-RPC result. url is only used to spot a Helius endpoint (it can count holders in one call).
-async function coinChain(rpc, mint, dev, url) {
+async function coinChain(rpc, mint, dev, url, opts) {
+  const venue = (opts && opts.venue) || 'pump';
   const out = { supply: null, decimals: 6, curve: null, holders: null, holderCount: null, devHoldPct: null, top10Pct: null, errors: [] };
   const attempt = async (label, fn) => { try { return await fn(); } catch (e) { out.errors.push(label); return null; } };
 
@@ -97,8 +98,9 @@ async function coinChain(rpc, mint, dev, url) {
   let supply = 0n;
   if (sup && sup.value) { supply = BigInt(sup.value.amount); out.decimals = sup.value.decimals; out.supply = Number(sup.value.uiAmountString || sup.value.uiAmount || 0); }
 
-  const curveAddr = curveFor(mint);
-  const acct = await attempt('curve', () => rpc('getAccountInfo', [curveAddr, { encoding: 'base64' }]));
+  // Only pump.fun's curve is read here. Other venues keep their curve data elsewhere (the browser reads it with the venue's SDK).
+  const curveAddr = venue === 'pump' ? curveFor(mint) : null;
+  const acct = curveAddr ? await attempt('curve', () => rpc('getAccountInfo', [curveAddr, { encoding: 'base64' }])) : null;
   const cv = acct && acct.value && acct.value.data ? readCurve(acct.value.data[0]) : null;
   if (cv) {
     const dec = 10 ** out.decimals;
@@ -119,7 +121,10 @@ async function coinChain(rpc, mint, dev, url) {
       const acc = owners && owners.value && owners.value[i];
       const owner = acc && acc.data && acc.data.parsed && acc.data.parsed.info ? acc.data.parsed.info.owner : null;
       const raw = BigInt(x.amount);
-      return { owner, raw, pct: pct(raw, supply), isCurve: owner === curveAddr, isDev: !!owner && owner === dev };
+      // On other venues the pool's token account is owned by a program address (not a person's wallet), so count those as the pool.
+      let isPool = owner === curveAddr;
+      if (!isPool && venue !== 'pump' && owner) { try { isPool = !isOnCurve(b58decode(owner)); } catch (e) { isPool = false; } }
+      return { owner, raw, pct: pct(raw, supply), isCurve: isPool, isDev: !!owner && owner === dev };
     });
     // The same wallet can own several accounts, so add them up.
     const byOwner = new Map();
