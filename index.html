@@ -7,14 +7,14 @@
 <meta name="description" content="Launch a token from a fresh one-time wallet you create and fund yourself. Non-custodial. No pool.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="/app.css">
 <style>
-.hero{padding:64px 0 28px;text-align:center}.hero .lede{margin:0 auto}.hero p[style]{justify-content:center}
+.hero{padding:48px 0 24px}
 .explore-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:26px 0 16px}
 .filters{display:flex;gap:8px;flex-wrap:wrap}
-.f{appearance:none;border:1px solid var(--line2);background:transparent;color:var(--mut);font:500 13px var(--sans);padding:7px 13px;border-radius:99px;cursor:pointer}
-.f.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.f{appearance:none;border:1px solid var(--line2);background:transparent;color:var(--mut);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer}
+.f.on{background:#2a1a10;color:#ffb066;border-color:#6a3a1a}
 .f:disabled{opacity:.5;cursor:not-allowed}
 .f small{font:500 10px var(--mono);margin-left:5px;opacity:.8}
 .search{margin-left:auto;max-width:240px}
@@ -26,33 +26,32 @@
 .tile b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .tile .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .empty{padding:40px 16px;text-align:center;color:var(--mut);border:1px dashed var(--line2);border-radius:var(--r)}
-.ticker{overflow:hidden;margin:6px 0 26px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
-.ticker .trk{display:flex;gap:10px;width:max-content;animation:scroll var(--dur,30s) linear infinite}
-.ticker:hover .trk{animation-play-state:paused}
-@keyframes scroll{to{transform:translateX(-50%)}}
-.pill{display:flex;align-items:center;gap:9px;padding:7px 14px 7px 8px;border:1px solid var(--line);border-radius:14px;background:var(--panel);text-decoration:none;white-space:nowrap;font-size:14px}
-.pill img{width:30px;height:30px;border-radius:8px;object-fit:cover;background:var(--panel2)}
-.pill b{font-weight:600}.pill span{color:var(--mut)}
-.dash{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 34px}
-@media(max-width:720px){.dash{grid-template-columns:minmax(0,1fr)}}
-.dc{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:250px;text-decoration:none}
-.dc:hover{border-color:var(--line2)}
-.dc .hd{display:flex;justify-content:space-between;font-size:14px}.dc .hd b{font-weight:600}.dc .hd span{color:var(--mut);font-size:13px}
-.dc .ft{display:flex;justify-content:space-between;color:var(--mut);font-size:14px;margin-top:auto}.dc .ft em{font-style:normal;color:var(--fg);font-weight:500}
-.dr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;font-size:14px;color:var(--mut)}
-.dr b{font-weight:500;color:var(--fg)}
-.vp{display:flex;gap:6px}.vp i{font-style:normal;font-size:12.5px;padding:3px 11px;border-radius:99px;border:1px solid var(--line2);color:var(--mut)}.vp i.on{background:#fff;color:#0a0a0a;border-color:#fff}
-.orbit{flex:1;display:grid;place-items:center;min-height:120px}
-.orbit div{position:relative;width:170px;height:100px;display:grid;place-items:center}
-.orbit svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.orbit .rg{fill:none;stroke:rgba(255,255,255,.35);stroke-width:1;stroke-dasharray:3 4;animation:dash 6s linear infinite}
-.orbit .rg.b{animation-direction:reverse;stroke:rgba(255,255,255,.2)}
-@keyframes dash{to{stroke-dashoffset:-70}}
-.orbit span{position:relative;width:50px;height:50px;border-radius:50%;border:1px solid #fff;display:grid;place-items:center;font:600 8.5px var(--mono);letter-spacing:.14em;animation:pulse 3s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.25)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
-.code{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;font:13px/1.75 var(--mono);color:var(--mut);white-space:pre-wrap;overflow-wrap:anywhere}
-.code u{text-decoration:none;color:var(--fg)}
-.sd{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:8px;animation:pulse 2.4s ease-in-out infinite}
+.home{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:36px;align-items:center;padding:64px 0 36px}
+@media(max-width:860px){.home{grid-template-columns:minmax(0,1fr);padding-top:36px}}
+.kick{display:inline-block;font:500 12px var(--mono);color:#ffb066;border:1px solid #4a2c17;background:#1f130b;border-radius:6px;padding:4px 9px;margin-bottom:18px}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0 0}
+.life{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.lh{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);font:500 12px var(--mono);color:var(--mut)}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 0 rgba(255,122,26,.5);animation:ping 2s ease-out infinite}
+@keyframes ping{70%{box-shadow:0 0 0 9px rgba(255,122,26,0)}100%{box-shadow:0 0 0 0 rgba(255,122,26,0)}}
+.steps{list-style:none;margin:0;padding:14px 16px 16px 42px;position:relative}
+.steps::before{content:"";position:absolute;left:22px;top:26px;bottom:30px;width:2px;background:var(--line2)}
+.steps::after{content:"";position:absolute;left:19px;top:22px;width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 12px rgba(255,122,26,.9);animation:travel 6s ease-in-out infinite}
+@keyframes travel{0%{top:22px}18%{top:22px}33%{top:74px}50%{top:128px}66%{top:182px}84%,100%{top:182px;opacity:.15}}
+.steps li{padding:10px 0;display:flex;flex-direction:column;gap:2px;opacity:.55;animation:lit 6s ease-in-out infinite;animation-delay:calc(var(--i)*1.5s - 1.5s)}
+@keyframes lit{0%,28%{opacity:1}40%,100%{opacity:.5}}
+.steps li:first-child{animation-delay:0s}
+.steps li b{font:600 14.5px var(--head)}.steps li span{font-size:13px;color:var(--mut)}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:8px 0 0}
+@media(max-width:700px){.trio{grid-template-columns:minmax(0,1fr)}}
+.trio div{padding:20px 22px 22px 0;display:flex;flex-direction:column;gap:6px}
+.trio div+div{padding-left:22px;border-left:1px solid var(--line)}
+@media(max-width:700px){.trio div+div{border-left:0;border-top:1px solid var(--line);padding-left:0}}
+.trio b{font:600 16px var(--head)}.trio span{color:var(--mut);font-size:14px}
+.venuebar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:16px 0;color:var(--mut);font-size:14px}
+.venuebar .lab{font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.venuebar .v{display:inline-flex;align-items:center;gap:8px}.venuebar .v i{width:7px;height:7px;border-radius:50%;background:var(--line2)}
+.venuebar .v.on{color:var(--fg)}.venuebar .v.on i{background:var(--ok)}.venuebar em{font:500 11px var(--mono);font-style:normal;color:var(--dim)}
 .crow{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .crow:last-child{border:0}.crow img{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--panel2)}
 .crow .ci{flex:1;min-width:140px}.crow .ci b{display:block;font-weight:600}.crow .ci span{color:var(--mut);font-size:13px}
@@ -67,7 +66,7 @@
 .venues{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 @media(max-width:560px){.venues{grid-template-columns:1fr}}
 .venue{text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--fg);font:inherit}
-.venue.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.venue.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:#1f130b}
 .venue:disabled{opacity:.5;cursor:not-allowed}
 .venue b{display:block;font-size:14px}.venue span{font-size:12px;color:var(--mut)}
 .drop{display:flex;align-items:center;gap:14px;border:1px dashed var(--line2);border-radius:12px;padding:12px;cursor:pointer;background:var(--bg)}
@@ -107,35 +106,29 @@
 <main class="wrap">
 
 <section id="v-explore" hidden>
-  <div class="hero">
-    <h1>Launch from a wallet<br>that is not your wallet.</h1>
-    <p class="lede">BurnerPad makes a fresh one-time wallet in your browser, you fund it yourself, and the coin launches from it. We never hold your money and the key never leaves your device.</p>
-    <p style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn pri" href="#launch">Launch a coin</a><a class="btn" href="#how">How it works</a></p>
+  <div class="home">
+    <div class="hl rise">
+      <span class="kick">Non-custodial · no pool · devnet and mainnet</span>
+      <h1>Launch from a wallet that <em>isn't yours.</em></h1>
+      <p class="lede">BurnerPad makes a one-time wallet in your browser. You fund it, it launches the coin, and you sweep what's left. We never hold your money, and the key never leaves your device.</p>
+      <p class="cta"><a class="btn pri" href="#launch">Light a burner</a><a class="btn" href="#how">How it works</a></p>
+    </div>
+    <div class="life rise" style="animation-delay:.12s" aria-label="Burner lifecycle">
+      <div class="lh"><span>burner.lifecycle</span><i class="pdot"></i></div>
+      <ol class="steps">
+        <li style="--i:0"><b>01 · Generate</b><span>New keypair, made in your browser</span></li>
+        <li style="--i:1"><b>02 · Fund</b><span>You send SOL from a wallet you choose</span></li>
+        <li style="--i:2"><b>03 · Launch</b><span>The burner signs. pump.fun, more soon</span></li>
+        <li style="--i:3"><b>04 · Sweep</b><span>Send what's left out. Burn the rest</span></li>
+      </ol>
+    </div>
   </div>
-  <div class="ticker" id="ticker" hidden><div class="trk" id="trk"></div></div>
-  <div class="dash">
-    <a class="dc rise" href="#launch" style="animation-delay:.05s"><div class="hd"><b>Launch</b><span>3 venues</span></div>
-      <div class="dr">Venue<div class="vp"><i class="on">pump.fun</i><i>Meteora</i><i>Raydium</i></div></div>
-      <div class="dr">Dev buy<b>optional</b></div><div class="dr">Deployer<b>one-time burner</b></div><div class="dr">Fees to<b>burner or any address</b></div>
-      <div class="ft"><span>Ready to launch</span><em>Open →</em></div></a>
-    <a class="dc rise" href="#launch" style="animation-delay:.12s"><div class="hd"><b>Burner wallet</b><span>Self-funded</span></div>
-      <div class="orbit"><div><svg viewBox="0 0 170 100"><ellipse class="rg" cx="85" cy="50" rx="82" ry="30"/><ellipse class="rg b" cx="85" cy="50" rx="60" ry="46"/></svg><span>BURNER</span></div></div>
-      <div class="dr">Private key<b>stays in your browser</b></div>
-      <div class="ft"><span>Generate, fund, launch, sweep</span><em>Open →</em></div></a>
-    <a class="dc rise" href="#explore" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth'});return false" style="animation-delay:.19s"><div class="hd"><b>Coin checks</b><span>On every coin page</span></div>
-      <div class="dr"><span><i class="sd"></i>Mint and freeze authority</span><b>read on-chain</b></div>
-      <div class="dr"><span><i class="sd"></i>Creator and top-10 holdings</span><b>read on-chain</b></div>
-      <div class="dr"><span><i class="sd"></i>Launch-block buyers</span><b>scanned</b></div>
-      <div class="ft"><span>Public data only</span><em>Browse coins →</em></div></a>
-    <a class="dc rise" href="#how" style="animation-delay:.26s"><div class="hd"><b>Docs</b><span>How it works</span></div>
-      <div class="code"><u># launch</u>
-burner → new key, made in browser
-you    → fund it yourself
-burner → create coin, dev buy
-<u># after</u>
-burner → sweep SOL (optional)</div>
-      <div class="ft"><span>No pool. No custody.</span><em>Open →</em></div></a>
+  <div class="trio">
+    <div><b>No pool</b><span>Nobody holds a shared balance. Every wallet is yours alone.</span></div>
+    <div><b>Key stays local</b><span>Generated and kept in your browser. Back it up before you fund it.</span></div>
+    <div><b>Checks on every coin</b><span>Authorities, holders and launch-block buyers, read straight from the chain.</span></div>
   </div>
+  <div class="venuebar"><span class="lab">Venues</span><span class="v on"><i></i>pump.fun</span><span class="v"><i></i>Meteora <em>soon</em></span><span class="v"><i></i>Raydium LaunchLab <em>soon</em></span></div>
   <div class="explore-bar">
     <div class="filters" id="filters"></div>
     <input class="search" id="q" placeholder="Search name or ticker" aria-label="Search">
@@ -144,7 +137,7 @@ burner → sweep SOL (optional)</div>
 </section>
 
 <section id="v-launch" hidden>
-  <div class="hero" style="padding-bottom:18px"><h1 style="font-size:clamp(26px,4vw,36px)">Launch a coin</h1><p class="lede">Pick a venue, add the basics, choose the wallet that signs.</p></div>
+  <div class="hero" style="padding-bottom:18px"><h1 style="font-size:clamp(28px,4vw,38px)">Launch a coin</h1><p class="lede">Pick a venue, add the basics, choose the wallet that signs.</p></div>
   <div class="cols">
     <div class="stack">
       <div class="card">
@@ -186,7 +179,7 @@ burner → sweep SOL (optional)</div>
 </section>
 
 <section id="v-claim" hidden>
-  <div class="hero" style="padding-bottom:18px"><h1 style="font-size:clamp(26px,4vw,36px)">Claim fees</h1><p class="lede">Creator fees build up as people trade your coins. Load the wallet that launched them and pay them out.</p></div>
+  <div class="hero" style="padding-bottom:18px"><h1 style="font-size:clamp(28px,4vw,38px)">Claim fees</h1><p class="lede">Creator fees build up as people trade your coins. Load the wallet that launched them and pay them out.</p></div>
   <div class="cols">
     <div class="stack">
       <div class="card"><h2>1 · Wallet</h2>
@@ -251,8 +244,7 @@ window.addEventListener('hashchange',route);
 // ---------- explore ----------
 function drawFilters(){var f=$('filters');f.textContent='';var all=h('button',{class:'f'+(S.filter===''?' on':''),text:'All'});all.onclick=function(){S.filter='';drawFilters();loadGrid()};f.appendChild(all);S.venues.forEach(function(v){var b=h('button',{class:'f'+(S.filter===v.id?' on':'')},[v.name]);if(!v.live){b.disabled=true;b.appendChild(h('small',{text:'SOON'}))}b.onclick=function(){S.filter=v.id;drawFilters();loadGrid()};f.appendChild(b)})}
 var qt;$('q').addEventListener('input',function(){clearTimeout(qt);qt=setTimeout(loadGrid,250)});
-function drawTicker(list){var t=$('ticker'),k=$('trk');if(!list.length){t.hidden=true;return}k.textContent='';var items=list.slice(0,12);for(var n=0;n<2;n++)items.forEach(function(l){var vn=(S.venues.filter(function(v){return v.id===l.venue})[0]||{}).name||l.venue;var img=h('img',{alt:''});if(l.image)img.src=l.image;k.appendChild(h('a',{class:'pill',href:'/coin/'+l.mint},[img,h('b',{text:'$'+l.symbol}),h('span',{text:vn+' · '+ago(l.at)})]))});k.style.setProperty('--dur',Math.max(18,items.length*5)+'s');t.hidden=false}
-function loadGrid(){api('/api/launches?venue='+encodeURIComponent(S.filter)+'&q='+encodeURIComponent($('q').value)).then(function(j){if(!S.filter&&!$('q').value)drawTicker(j.launches);var g=$('grid');g.textContent='';if(!j.launches.length){g.className='';g.appendChild(h('div',{class:'empty',text:$('q').value||S.filter?'Nothing matches.':'No launches yet. Be the first.'}));return}g.className='grid';j.launches.forEach(function(l,i){var a=h('a',{class:'tile rise',href:'/coin/'+l.mint,style:'animation-delay:'+Math.min(i,12)*0.04+'s'});var img=h('img',{alt:'',loading:'lazy'});if(l.image)img.src=l.image;a.appendChild(img);var vn=(S.venues.filter(function(v){return v.id===l.venue})[0]||{}).name||l.venue;a.appendChild(h('div',{class:'t'},[h('b',{text:l.name}),h('span',{class:'mono muted small',text:'$'+l.symbol}),h('span',{class:'meta'},[h('span',{class:'chip live',text:vn}),l.burner?h('span',{class:'chip',text:'burner'}):'',h('span',{class:'muted small',text:ago(l.at)})])]));g.appendChild(a)})}).catch(function(e){$('grid').textContent=e.message})}
+function loadGrid(){api('/api/launches?venue='+encodeURIComponent(S.filter)+'&q='+encodeURIComponent($('q').value)).then(function(j){var g=$('grid');g.textContent='';if(!j.launches.length){g.className='';g.appendChild(h('div',{class:'empty',text:$('q').value||S.filter?'Nothing matches.':'No launches yet. Be the first.'}));return}g.className='grid';j.launches.forEach(function(l,i){var a=h('a',{class:'tile rise',href:'/coin/'+l.mint,style:'animation-delay:'+Math.min(i,12)*0.04+'s'});var img=h('img',{alt:'',loading:'lazy'});if(l.image)img.src=l.image;a.appendChild(img);var vn=(S.venues.filter(function(v){return v.id===l.venue})[0]||{}).name||l.venue;a.appendChild(h('div',{class:'t'},[h('b',{text:l.name}),h('span',{class:'mono muted small',text:'$'+l.symbol}),h('span',{class:'meta'},[h('span',{class:'chip live',text:vn}),l.burner?h('span',{class:'chip',text:'burner'}):'',h('span',{class:'muted small',text:ago(l.at)})])]));g.appendChild(a)})}).catch(function(e){$('grid').textContent=e.message})}
 
 // ---------- launch: venue ----------
 function drawVenues(){var v=$('venues');v.textContent='';S.venues.forEach(function(x){var b=h('button',{class:'venue'+(S.venue===x.id?' on':''),type:'button'},[h('b',{text:x.name}),h('span',{text:x.live?x.blurb:'Coming soon'})]);if(!x.live)b.disabled=true;b.onclick=function(){S.venue=x.id;drawVenues()};v.appendChild(b)})}
