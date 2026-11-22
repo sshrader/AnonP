@@ -96,6 +96,7 @@ html,body{overflow-x:clip}
 <header class="top"><div class="wrap">
   <a class="logo" href="/"><svg class="flame" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3b1f"/><stop offset=".55" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ffb02e"/></linearGradient><linearGradient id="fg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb02e"/><stop offset="1" stop-color="#fff0a0"/></linearGradient></defs><path class="fo" d="M32 4c4 10 17 17 17 33a17 17 0 0 1-34 0c0-7 3-11 7-15 0 6 3 8 6 8-3-11 0-19 4-26z" fill="url(#fg1)"/><path class="fi" d="M32 30c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 2 4 3 4-1-5 0-8 1-11z" fill="url(#fg2)"/></svg>BurnerPad</a>
   <nav><a href="#explore" id="nav-explore"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></a><a href="#launch" id="nav-launch"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3 3 4.5 6 4.5 9.5a4.5 4.5 0 0 1-9 0C7.5 9 9 6 12 3z"/><path d="M12 17v4"/></svg><span>Launch</span></a><a href="#claim" id="nav-claim"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span>Claim fees</span></a><a href="#docs" id="nav-docs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg><span>Docs</span></a></nav>
+  <button class="btn sm wbtn" id="wbtn" type="button">Connect wallet</button>
   <span class="net" id="net">…</span>
 </div></header>
 
@@ -342,10 +343,19 @@ function needSol(){var buy=Math.max(0,+$('buy').value||0);return buy+(S.cluster=
 function updateBalUi(){var v=$('balv');if(!v)return;v.textContent=S.bal.toFixed(4)+' SOL';var need=needSol();$('balbar').style.width=Math.min(100,S.bal/need*100)+'%';$('needtxt').textContent=S.bal>=need?'Enough to launch.':'Needs about '+need.toFixed(3)+' SOL: your buy plus network fees and account rent.'}
 var balT;function pollBal(){clearTimeout(balT);if(!S.burner||!B()||location.hash!=='#launch'){balT=setTimeout(pollBal,5000);return}B().balanceOf(S.cluster,S.burner.address).then(function(b){S.bal=b;updateBalUi();updateAll()},function(){}).then(function(){balT=setTimeout(pollBal,5000)})}
 
+// One wallet connection for the whole site: the button in the header connects and disconnects it.
+function provider(){return window.phantom&&window.phantom.solana||window.solana}
+function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+function walletUi(){var b=$('wbtn');if(!b)return;b.textContent=S.phantom?short(S.phantom.address):'Connect wallet';b.title=S.phantom?'Connected. Click to disconnect.':'Connect a Solana wallet';b.className='btn sm wbtn'+(S.phantom?' on':'')}
+function afterWallet(){walletUi();if($('m-phantom'))drawPhantom();updateAll();if(location.hash==='#claim'){C.signer=null;claimInit()}}
+function connectWallet(silent){var p=provider();if(!p){if(!silent)alert_('No Solana wallet found in this browser. Install Phantom, or use a burner.');return Promise.resolve()}
+  return p.connect(silent?{onlyIfTrusted:true}:undefined).then(function(r){S.phantom={address:r.publicKey.toString(),provider:p};afterWallet()},function(e){if(!silent)alert_(e&&e.message||'Connection cancelled.')})}
+function alert_(m){var t=h('div',{class:'toast',role:'status',text:m});document.body.appendChild(t);setTimeout(function(){t.remove()},4500)}
+function disconnectWallet(){var p=provider();S.phantom=null;try{if(p&&p.disconnect)p.disconnect()}catch(e){}afterWallet()}
 function drawPhantom(){var box=$('m-phantom');box.textContent='';var p=window.phantom&&window.phantom.solana||window.solana;
   if(!p){box.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No Solana wallet found in this browser. Install Phantom, or use a burner.'}));return}
   if(S.phantom){box.appendChild(h('label',{text:'Connected'}));box.appendChild(h('div',{class:'addr'},[h('code',{text:S.phantom.address})]));box.appendChild(h('div',{class:'note warn',text:'Launching from your main wallet puts its address on the coin. Use a burner if you want the launch kept apart.'}));return}
-  var b=h('button',{class:'btn pri',type:'button',text:'Connect wallet'});b.onclick=function(){p.connect().then(function(r){S.phantom={address:r.publicKey.toString(),provider:p};drawPhantom();updateAll()},function(e){fail(e&&e.message||'Connection cancelled.')})};box.appendChild(b)}
+  var b=h('button',{class:'btn pri',type:'button',text:'Connect wallet'});b.onclick=function(){connectWallet(false)};box.appendChild(b)}
 
 // ---------- launch: summary ----------
 function feeBps(){return S.venue==='pump'&&S.platform?S.platform.bps:0}
@@ -404,7 +414,7 @@ $('cmode').addEventListener('click',function(e){var m=e.target.getAttribute&&e.t
 function claimInit(){
   if(C.mode==='burner'){var box=$('c-burner');box.textContent='';if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No burner is saved in this browser. Paste its key instead, or connect the wallet that launched your coins.'}));return}
     box.appendChild(h('label',{text:'Burner in this browser'}));box.appendChild(h('div',{class:'addr'},[h('code',{text:S.burner.address})]));var b=h('button',{class:'btn',type:'button',style:'margin-top:12px',text:'Load coins and fees'});b.onclick=function(){setSigner({wallet:S.burner.wallet,address:S.burner.address})};box.appendChild(b)}
-  if(C.mode==='phantom'){var pb=$('c-phantom');pb.textContent='';var p=window.phantom&&window.phantom.solana||window.solana;if(!p){pb.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No Solana wallet found in this browser.'}));return}var cb=h('button',{class:'btn',type:'button',text:'Connect wallet'});cb.onclick=function(){p.connect().then(function(r){setSigner({wallet:p,address:r.publicKey.toString()})},function(e){cfail(e&&e.message||'Connection cancelled.')})};pb.appendChild(cb)}}
+  if(C.mode==='phantom'){var pb=$('c-phantom');pb.textContent='';var p=window.phantom&&window.phantom.solana||window.solana;if(!p){pb.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No Solana wallet found in this browser.'}));return}if(S.phantom){pb.appendChild(h('label',{text:'Connected wallet'}));pb.appendChild(h('div',{class:'addr'},[h('code',{text:S.phantom.address})]));var lb=h('button',{class:'btn',type:'button',style:'margin-top:12px',text:'Load coins and fees'});lb.onclick=function(){setSigner({wallet:S.phantom.provider,address:S.phantom.address})};pb.appendChild(lb);return}var cb=h('button',{class:'btn',type:'button',text:'Connect wallet'});cb.onclick=function(){connectWallet(false)};pb.appendChild(cb)}}
 $('cload').onclick=function(){if(!B())return cfail('The launcher is still loading. Try again in a moment.');try{var b=B().burnerFromString($('ckey').value);$('ckey').value='';setSigner({wallet:b.wallet,address:b.address})}catch(e){cfail(e.message)}};
 function csay(label){return logStep(label,$('clog'))}
 function setSigner(sg){if(!B())return cfail('The launcher is still loading. Try again in a moment.');cfail('');C.signer=sg;$('ccoins-card').hidden=false;$('cvault').hidden=false;loadClaims()}
@@ -427,7 +437,11 @@ function boot(){
     drawFilters();drawVenues();route()},function(e){document.body.insertBefore(h('div',{class:'wrap',style:'padding:20px',text:e.message}),document.body.firstChild)});
   drawPhantom();
 }
-window.addEventListener('load',function(){loadBurner();drawBurner();pollBal();updateAll()});
+window.addEventListener('load',function(){loadBurner();drawBurner();pollBal();updateAll();
+  $('wbtn').onclick=function(){S.phantom?disconnectWallet():connectWallet(false)};walletUi();
+  var tries=0;(function hook(){var pv=provider();if(!pv){if(tries++<6)setTimeout(hook,400);return}
+    connectWallet(true);
+    if(pv.on){pv.on('disconnect',function(){S.phantom=null;afterWallet()});pv.on('accountChanged',function(pk){S.phantom=pk?{address:pk.toString(),provider:pv}:null;afterWallet()})}})()});
 boot();
 })();
 

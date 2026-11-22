@@ -109,3 +109,10 @@ nav a .ic{width:18px;height:18px;flex:none;display:none}
 @keyframes bgflick{0%,100%{transform:scale(1,1) skewX(0)}25%{transform:scale(.97,1.05) skewX(2deg)}55%{transform:scale(1.02,.97) skewX(-1.5deg)}80%{transform:scale(.99,1.04) skewX(1deg)}}
 .fwrap .fc,.fwrap .tc{background:rgba(17,18,20,.62);backdrop-filter:blur(3px)}
 @media(prefers-reduced-motion:reduce){.bgflame::before,.bgflame svg{animation:none}}
+
+/* Wallet button and toast */
+.wbtn{white-space:nowrap}.wbtn.on{font-family:var(--mono);font-weight:500;border-color:var(--dim)}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);color:var(--fg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:50;max-width:min(92vw,420px);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+@media(min-width:900px){body.sb header.top .wbtn{margin:auto 0 0 4px;align-self:stretch}body.sb header.top .wbtn + .net{margin-top:0}}
+@media(max-width:899px){header.top .wbtn{margin-left:auto;padding:7px 12px;font-size:13px}}
+@media(max-width:560px){header.top .wrap{flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;row-gap:6px}header.top .wbtn{margin-left:auto;flex:none}header.top nav{order:3;width:100%;margin:0}}
