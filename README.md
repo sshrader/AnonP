@@ -33,7 +33,13 @@ Defaults to devnet. Set `CLUSTER=mainnet` and `RPC_URL` for mainnet. Test on dev
 | `PLATFORM_BPS` | Platform share of creator fees in basis points. Default 100 (1%), capped at 1000. |
 | `PUBLIC_URL` | Public origin, used in metadata links. |
 | `DATA_DIR` | Where metadata, images and the launch list are stored (use a volume). |
+| `ADMIN_TOKEN` | Turns on `/admin` (platform fees overview and payouts). Use a long random value. Without it the page and its API are off. |
 | `BLOCKED_WORDS` | Extra comma-separated words to reject in names and descriptions. |
+
+## Claim fees and admin
+
+- `#claim` (Claim fees): load the launching wallet from this browser, a pasted key or a connected wallet. It lists that wallet's coins, shows fees waiting, and pays them out. Payouts land as SOL in the launching wallet; use Sweep to move them.
+- `/admin`: enter `ADMIN_TOKEN` to see every launch, the platform share signed for each, fees waiting in each coin, and the platform wallet balance. Connect any wallet to pay out coins; it only pays the network fee.
 
 ## Layout
 

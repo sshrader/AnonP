@@ -660,3 +660,22 @@ export async function sweep({ cluster, burner, to }, step) {
   tx.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
   return await signAndSend({ step, conn, cfg, wallet: burner.wallet, tx, labels: { dry: 'Dry run (sweep)', sign: 'Sign sweep', send: 'Send sweep' } });
 }
+
+// Accepts a backup the way people keep it: a JSON array of numbers (the downloaded file) or a base58 private key (what wallets export).
+export function burnerFromString(str) {
+  const t = String(str || '').trim();
+  if (!t) throw new Error('Paste a private key first.');
+  if (t[0] === '[') {
+    let arr; try { arr = JSON.parse(t); } catch (e) { throw new Error('That backup is not valid JSON.'); }
+    if (!Array.isArray(arr) || arr.length !== 64) throw new Error('A backup file holds 64 numbers.');
+    return burnerFromSecret(Uint8Array.from(arr));
+  }
+  let n = 0n;
+  for (const ch of t) { const i = B58.indexOf(ch); if (i < 0) throw new Error('That is not a valid private key.'); n = n * 58n + BigInt(i); }
+  let hex = n.toString(16); if (hex.length % 2) hex = '0' + hex;
+  let zeros = 0; while (zeros < t.length && t[zeros] === '1') zeros++;
+  const bytes = new Uint8Array(zeros + hex.length / 2);
+  for (let i = 0; i < hex.length / 2; i++) bytes[zeros + i] = parseInt(hex.substr(i * 2, 2), 16);
+  if (bytes.length !== 64) throw new Error('That is not a 64-byte private key.');
+  return burnerFromSecret(bytes);
+}

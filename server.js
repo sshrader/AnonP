@@ -42,10 +42,11 @@ const rpcUrl = (c) => {
 };
 
 const hits = new Map();
-function limited(key, max) {
+function limited(key, max, peek) {
   const now = Date.now();
   const recent = (hits.get(key) || []).filter((t) => now - t < 3600 * 1000);
   if (recent.length >= max) { hits.set(key, recent); return true; }
+  if (peek) { hits.set(key, recent); return false; }
   recent.push(now); hits.set(key, recent);
   return false;
 }
@@ -235,6 +236,31 @@ async function coinInfo(res, mint) {
   });
 }
 
+// Coins launched by one wallet, so the claim page can list them. Wallet addresses are already public on-chain.
+function myCoinsApi(res, u) {
+  const w = text(u.searchParams.get('wallet'), 60);
+  if (!B58_RE.test(w)) return send(res, 400, { error: 'That is not a valid wallet address.' });
+  const c = cfg();
+  const list = loadLaunches(c).filter((l) => l.wallet === w).slice(0, 100).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, image: l.image ? '/images/' + l.image : '' }));
+  send(res, 200, { cluster: c.cluster, coins: list });
+}
+
+function adminOk(req) {
+  const token = String(process.env.ADMIN_TOKEN || '').trim();
+  if (!token) return false;
+  const h = String(req.headers.authorization || '');
+  const given = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  return crypto.timingSafeEqual(crypto.createHash('sha256').update(given).digest(), crypto.createHash('sha256').update(token).digest());
+}
+// Everything the owner needs to see what the platform has earned. Gated by ADMIN_TOKEN.
+function adminLaunches(req, res) {
+  if (!String(process.env.ADMIN_TOKEN || '').trim()) return send(res, 503, { error: 'The admin page is off. Set ADMIN_TOKEN on the server.' });
+  if (limited('adminfail:' + clientIp(req), 20, true)) return send(res, 429, { error: 'Too many wrong tries. Wait an hour.' });
+  if (!adminOk(req)) { limited('adminfail:' + clientIp(req), 20); return send(res, 401, { error: 'Wrong token.' }); }
+  const c = cfg();
+  send(res, 200, { cluster: c.cluster, platform: c.platform, launches: loadLaunches(c).map((l) => ({ mint: l.mint, name: l.name, symbol: l.symbol, venue: l.venue, wallet: l.wallet, at: l.at, split: !!l.split, platformBps: l.platformBps || 0, burner: !!l.burner })) });
+}
+
 function stateApi(res) {
   const c = cfg();
   send(res, 200, { cluster: c.cluster, maxBuy: c.maxBuy, platform: c.platform.bps ? c.platform : null, venues: VENUES });
@@ -275,10 +301,13 @@ const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x'); const p = u.pathname;
     if (req.method === 'POST' && p === '/api/metadata') return await createMetadata(req, res);
     if (req.method === 'POST' && p === '/api/launched') return await launched(req, res);
+    if (req.method === 'POST' && p === '/api/admin/launches') return adminLaunches(req, res);
     if (req.method === 'POST' && p === '/api/rpc/mainnet') return await rpcProxy(req, res);
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     if (p === '/api/state') return stateApi(res);
     if (p === '/api/launches') return launchesApi(res, u);
+    if (p === '/api/mycoins') return myCoinsApi(res, u);
+    if (p === '/admin') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex', 'Referrer-Policy': 'no-referrer' }); return res.end(fs.readFileSync(path.join(__dirname, 'admin.html'))); }
     if (p === '/api/health') return send(res, 200, { ok: true });
     { const m = /^\/api\/coin\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(p); if (m) return await coinInfo(res, m[1]); }
     if (/^\/coin\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p)) return page(res, 'coin.html');

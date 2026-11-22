@@ -53,6 +53,10 @@
 .code{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;font:13px/1.75 var(--mono);color:var(--mut);white-space:pre-wrap;overflow-wrap:anywhere}
 .code u{text-decoration:none;color:var(--fg)}
 .sd{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:8px;animation:pulse 2.4s ease-in-out infinite}
+.crow{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.crow:last-child{border:0}.crow img{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--panel2)}
+.crow .ci{flex:1;min-width:140px}.crow .ci b{display:block;font-weight:600}.crow .ci span{color:var(--mut);font-size:13px}
+.crow .amt{font:500 14px var(--mono)}
 /* launch */
 .cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:18px;align-items:start}
 @media(max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
@@ -96,7 +100,7 @@
 <body>
 <header class="top"><div class="wrap">
   <a class="logo" href="/"><svg class="flame" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3b1f"/><stop offset=".55" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ffb02e"/></linearGradient><linearGradient id="fg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb02e"/><stop offset="1" stop-color="#fff0a0"/></linearGradient></defs><path class="fo" d="M32 4c4 10 17 17 17 33a17 17 0 0 1-34 0c0-7 3-11 7-15 0 6 3 8 6 8-3-11 0-19 4-26z" fill="url(#fg1)"/><path class="fi" d="M32 30c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 2 4 3 4-1-5 0-8 1-11z" fill="url(#fg2)"/></svg>BurnerPad</a>
-  <nav><a href="#explore" id="nav-explore">Explore</a><a href="#launch" id="nav-launch">Launch</a><a href="#how" id="nav-how">How it works</a></nav>
+  <nav><a href="#explore" id="nav-explore">Explore</a><a href="#launch" id="nav-launch">Launch</a><a href="#claim" id="nav-claim">Claim fees</a><a href="#how" id="nav-how">How it works</a></nav>
   <span class="net" id="net">…</span>
 </div></header>
 
@@ -181,6 +185,27 @@ burner → sweep SOL (optional)</div>
   </div>
 </section>
 
+<section id="v-claim" hidden>
+  <div class="hero" style="padding-bottom:18px"><h1 style="font-size:clamp(26px,4vw,36px)">Claim fees</h1><p class="lede">Creator fees build up as people trade your coins. Load the wallet that launched them and pay them out.</p></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card"><h2>1 · Wallet</h2>
+        <div class="seg" id="cmode" style="grid-template-columns:repeat(3,1fr)"><button data-m="burner" class="on">This browser</button><button data-m="key">Paste a key</button><button data-m="phantom">Connect wallet</button></div>
+        <div id="c-burner" style="margin-top:14px"></div>
+        <div id="c-key" hidden style="margin-top:14px"><label for="ckey">Private key (base58) or the backup file contents</label><textarea id="ckey" rows="3" autocomplete="off" spellcheck="false" style="font-family:var(--mono);font-size:13px"></textarea><div class="muted small" style="margin:6px 0 10px">Used in this page only. It is never sent anywhere.</div><button class="btn" id="cload" type="button">Load wallet</button></div>
+        <div id="c-phantom" hidden style="margin-top:14px"></div>
+        <div class="err" id="cerr" style="margin-top:10px"></div>
+      </div>
+      <div class="card" id="ccoins-card" hidden><h2>2 · Your coins</h2><div id="ccoins"></div></div>
+    </div>
+    <div class="stack" style="position:sticky;top:76px">
+      <div class="card" id="cvault" hidden><h2>Direct creator fees</h2><div id="cvaultbody"></div></div>
+      <div class="card"><h2>How payouts work</h2><p class="muted small" style="margin:0 0 10px">A coin launched with a fee split holds its fees in the coin's own vault until someone pays them out. <b style="color:var(--fg)">Pay out</b> sends each shareholder their share, so the platform share and yours move together.</p><p class="muted small" style="margin:0">Payouts land as SOL in the wallet that launched the coin. To move it, use <a href="#launch" style="text-decoration:underline">Sweep</a> on the Launch page, which links the destination to that wallet on-chain.</p></div>
+      <div class="card" id="clogcard" hidden><h2>Progress</h2><div class="log" id="clog"></div></div>
+    </div>
+  </div>
+</section>
+
 <section id="v-how" hidden>
   <div class="hero"><h1>How it works</h1><p class="lede">BurnerPad is a launcher, not a mixer. It keeps your main wallet out of the launch transaction. It does not hide where the money came from.</p></div>
   <div class="stack" style="max-width:720px">
@@ -220,7 +245,7 @@ function copy(text,btn){var done=function(){var o=btn.textContent;btn.textConten
 var S={cluster:'devnet',platform:null,venues:[],venue:'pump',filter:'',mode:'burner',burner:null,phantom:null,bal:0,imgData:'',saved:false,busy:false,maxBuy:5};
 
 // ---------- routing ----------
-function route(){var v=(location.hash||'#explore').slice(1);if(['explore','launch','how'].indexOf(v)<0)v='explore';['explore','launch','how'].forEach(function(n){$('v-'+n).hidden=n!==v;$('nav-'+n).className=n===v?'on':''});if(v==='explore')loadGrid();if(v==='launch')updateAll()}
+function route(){var v=(location.hash||'#explore').slice(1);if(['explore','launch','claim','how'].indexOf(v)<0)v='explore';['explore','launch','claim','how'].forEach(function(n){$('v-'+n).hidden=n!==v;$('nav-'+n).className=n===v?'on':''});if(v==='explore')loadGrid();if(v==='launch')updateAll();if(v==='claim')claimInit()}
 window.addEventListener('hashchange',route);
 
 // ---------- explore ----------
@@ -291,7 +316,7 @@ function updateAll(){
 ['name','sym','buy','desc'].forEach(function(id){$(id).addEventListener('input',function(){if(id==='buy'){var m=S.maxBuy;if(+this.value>m)this.value=m}updateAll()})});
 
 // ---------- launch: go ----------
-function logStep(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('log').appendChild(row);return function(state,detail,href){row.className=state==='ok'?'ok':state==='warn'?'warn':'err';row.firstChild.textContent=state==='ok'?'✓':state==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(detail){sp.appendChild(document.createTextNode(' — '));if(href){var a=h('a',{href:href,target:'_blank',rel:'noopener',text:detail});sp.appendChild(a)}else sp.appendChild(document.createTextNode(detail))}}}
+function logStep(label,box){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);(box||$('log')).appendChild(row);return function(state,detail,href){row.className=state==='ok'?'ok':state==='warn'?'warn':'err';row.firstChild.textContent=state==='ok'?'✓':state==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(detail){sp.appendChild(document.createTextNode(' — '));if(href){var a=h('a',{href:href,target:'_blank',rel:'noopener',text:detail});sp.appendChild(a)}else sp.appendChild(document.createTextNode(detail))}}}
 $('go').addEventListener('click',function(){
   if(S.busy)return;fail('');S.busy=true;updateAll();$('logcard').hidden=false;$('log').textContent='';$('result').textContent='';
   var step=logStep;var buy=Math.max(0,+$('buy').value||0);
@@ -313,6 +338,29 @@ function finish(out){S.busy=false;var box=$('result');box.textContent='';var c=h
   var r=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});r.appendChild(h('a',{class:'btn pri sm',href:'/coin/'+out.mint,text:'Open coin page'}));r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:'https://pump.fun/coin/'+out.mint,text:'pump.fun'}));c.appendChild(r);
   if(S.mode==='burner'){var sw=h('div',{style:'margin-top:14px'});sw.appendChild(h('label',{text:'Sweep leftover SOL out of the burner (optional)'}));sw.appendChild(h('input',{id:'swto',placeholder:'Destination address'}));sw.appendChild(h('div',{class:'muted small',style:'margin:6px 0 8px',text:'This links the destination to the burner on-chain. Tokens you bought stay in the burner.'}));var sb=h('button',{class:'btn sm',type:'button',text:'Sweep SOL'});sb.onclick=function(){var to=$('swto').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to))return fail('Enter a valid destination address.');sb.disabled=true;B().sweep({cluster:S.cluster,burner:S.burner,to:to},logStep).then(function(){pollBal()},function(e){fail(e.message)}).then(function(){sb.disabled=false})};sw.appendChild(sb);c.appendChild(sw)}
   box.appendChild(c);updateAll()}
+
+
+// ---------- claim fees ----------
+var C={mode:'burner',signer:null,busy:false};
+function cfail(m){$('cerr').textContent=m||''}
+$('cmode').addEventListener('click',function(e){var m=e.target.getAttribute&&e.target.getAttribute('data-m');if(!m)return;C.mode=m;C.signer=null;Array.prototype.forEach.call(this.children,function(b){b.className=b.getAttribute('data-m')===m?'on':''});$('c-burner').hidden=m!=='burner';$('c-key').hidden=m!=='key';$('c-phantom').hidden=m!=='phantom';$('ccoins-card').hidden=true;$('cvault').hidden=true;cfail('');claimInit()});
+function claimInit(){
+  if(C.mode==='burner'){var box=$('c-burner');box.textContent='';if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No burner is saved in this browser. Paste its key instead, or connect the wallet that launched your coins.'}));return}
+    box.appendChild(h('label',{text:'Burner in this browser'}));box.appendChild(h('div',{class:'addr'},[h('code',{text:S.burner.address})]));var b=h('button',{class:'btn',type:'button',style:'margin-top:12px',text:'Load coins and fees'});b.onclick=function(){setSigner({wallet:S.burner.wallet,address:S.burner.address})};box.appendChild(b)}
+  if(C.mode==='phantom'){var pb=$('c-phantom');pb.textContent='';var p=window.phantom&&window.phantom.solana||window.solana;if(!p){pb.appendChild(h('p',{class:'muted small',style:'margin:0',text:'No Solana wallet found in this browser.'}));return}var cb=h('button',{class:'btn',type:'button',text:'Connect wallet'});cb.onclick=function(){p.connect().then(function(r){setSigner({wallet:p,address:r.publicKey.toString()})},function(e){cfail(e&&e.message||'Connection cancelled.')})};pb.appendChild(cb)}}
+$('cload').onclick=function(){if(!B())return cfail('The launcher is still loading. Try again in a moment.');try{var b=B().burnerFromString($('ckey').value);$('ckey').value='';setSigner({wallet:b.wallet,address:b.address})}catch(e){cfail(e.message)}};
+function csay(label){return logStep(label,$('clog'))}
+function setSigner(sg){if(!B())return cfail('The launcher is still loading. Try again in a moment.');cfail('');C.signer=sg;$('ccoins-card').hidden=false;$('cvault').hidden=false;loadClaims()}
+function loadClaims(){
+  var sg=C.signer,box=$('ccoins');box.textContent='Loading…';var vb=$('cvaultbody');vb.textContent='';vb.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Reading…'}));
+  B().creatorFees(S.cluster,sg.address).then(function(sol){vb.textContent='';vb.appendChild(h('div',{class:'bal',style:'margin-top:0'},[h('span',{class:'muted small',text:'Waiting'}),h('b',{text:sol.toFixed(6)+' SOL'})]));vb.appendChild(h('p',{class:'muted small',style:'margin:0 0 10px',text:'Fees from coins launched without a split. Sent to this wallet.'}));var cb=h('button',{class:'btn sm',type:'button',text:'Claim'});if(!(sol>0))cb.disabled=true;cb.onclick=function(){runClaim(cb,function(){return B().claimCreatorFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address},csay)})};vb.appendChild(cb)},function(e){vb.textContent='Could not read: '+e.message});
+  api('/api/mycoins?wallet='+encodeURIComponent(sg.address)).then(function(j){box.textContent='';if(!j.coins.length){box.appendChild(h('div',{class:'empty',text:'No coins from BurnerPad were launched by this wallet.'}));return}
+    j.coins.forEach(function(c){var amt=h('span',{class:'amt muted',text:c.split?'…':'no split'});var btn=h('button',{class:'btn sm',type:'button',text:'Pay out'});btn.disabled=true;var img=h('img',{alt:''});if(c.image)img.src=c.image;
+      box.appendChild(h('div',{class:'crow'},[img,h('div',{class:'ci'},[h('b',{text:c.name}),h('span',{class:'mono',text:'$'+c.symbol+(c.platformBps?' · '+c.platformBps/100+'% platform':'')})]),amt,btn,h('a',{class:'btn sm',href:'/coin/'+c.mint,text:'Page'})]));
+      if(!c.split)return;
+      B().distributableFees(S.cluster,c.mint).then(function(f){amt.textContent=f.sol.toFixed(6)+' SOL';amt.className='amt';btn.disabled=!f.canDistribute;btn.title=f.canDistribute?'':'Needs at least '+f.min.toFixed(6)+' SOL';if(!f.canDistribute)amt.textContent+=' (min '+f.min.toFixed(4)+')';btn.onclick=function(){runClaim(btn,function(){return B().distributeCoinFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address,mint:c.mint},csay)})}},function(){amt.textContent='unreadable'})})
+  },function(e){box.textContent=e.message})}
+function runClaim(btn,fn){if(C.busy)return;C.busy=true;btn.disabled=true;$('clogcard').hidden=false;$('clog').textContent='';cfail('');fn().then(function(){setTimeout(loadClaims,2500)},function(e){cfail(e&&e.message||'That did not go through.')}).then(function(){C.busy=false})}
 
 // ---------- boot ----------
 function boot(){

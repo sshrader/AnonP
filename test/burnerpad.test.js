@@ -114,6 +114,21 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   check('coin: creator wallet exposed on coin page', r.json.creator === burner);
   check('coin: unknown coin 404', (await call('GET', '/api/coin/' + addr())).status === 404);
 
+
+  // my coins and admin
+  r = await call('GET', '/api/mycoins?wallet=' + burner);
+  check('mycoins: lists coins for that wallet', r.status === 200 && r.json.coins.length === 1 && r.json.coins[0].mint === mint && r.json.coins[0].split === true);
+  check('mycoins: other wallet sees none', (await call('GET', '/api/mycoins?wallet=' + addr())).json.coins.length === 0);
+  check('mycoins: bad wallet rejected', (await call('GET', '/api/mycoins?wallet=nope')).status === 400);
+  r = await call('GET', '/admin'); check('admin page served noindex', r.status === 200 && /noindex/.test(r.headers['x-robots-tag'] || ''));
+  check('admin api: off without a token', (await call('POST', '/api/admin/launches')).status === 503);
+  process.env.ADMIN_TOKEN = 'secret-token-for-tests-1234567890';
+  const adm = (tok) => new Promise((ok) => { const q = http.request({ host: '127.0.0.1', port, path: '/api/admin/launches', method: 'POST', headers: tok ? { Authorization: 'Bearer ' + tok } : {} }, (res) => { let b = ''; res.on('data', (c) => (b += c)); res.on('end', () => ok({ status: res.statusCode, json: JSON.parse(b) })); }); q.end(); });
+  check('admin api: no token is 401', (await adm('')).status === 401);
+  check('admin api: wrong token is 401', (await adm('nope')).status === 401);
+  r = await adm(process.env.ADMIN_TOKEN);
+  check('admin api: right token lists launches with wallets and platform share', r.status === 200 && r.json.launches.length === 1 && r.json.launches[0].wallet === burner && r.json.launches[0].platformBps === 100 && r.json.platform.wallet === platform, JSON.stringify(r.json).slice(0, 200));
+
   // trust.js on bad data
   const { trustChecks } = require('../trust.js');
   const bad = Object.fromEntries(trustChecks({ authority: { mint: 'x', freeze: 'y' }, devHoldPct: 35, top10Pct: 70, launch: { capped: false, early: 6, checked: 6, heldPct: 22 } }, { split: false, platformBps: 100 }).map((x) => [x.id, x.status]));

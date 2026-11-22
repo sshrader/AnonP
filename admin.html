@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Admin · BurnerPad</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<style>
+.pg{padding:36px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.stat small{display:block;color:var(--mut);font-size:12.5px}.stat b{font:500 22px var(--mono)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px}
+th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;letter-spacing:.05em;text-transform:uppercase;padding:12px 14px;border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}tr:last-child td{border:0}
+td.n{text-align:right;font-family:var(--mono)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.err{color:var(--bad);font-size:14px;margin-top:10px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><a class="logo" href="/">BurnerPad <span class="muted small" style="font-weight:500">admin</span></a><span class="net" id="net">…</span></div></header>
+<main class="wrap pg">
+  <div id="gate" class="card" style="max-width:420px"><h2>Admin token</h2><input id="tok" type="password" placeholder="ADMIN_TOKEN" autocomplete="off"><div class="row" style="margin-top:12px"><button class="btn pri" id="enter">Open</button></div><div class="err" id="gerr"></div></div>
+  <div id="dash" hidden>
+    <div class="row" style="justify-content:space-between"><h1 style="font-size:28px;margin:0;text-align:left">Platform fees</h1><div class="row"><button class="btn sm" id="refresh">Refresh</button><button class="btn sm" id="lock">Lock</button></div></div>
+    <div class="stats" id="stats"></div>
+    <div class="card" style="margin-bottom:16px"><h2>Pay out</h2>
+      <p class="muted small" style="margin:0 0 12px">Paying out a coin sends every shareholder their share, including the platform wallet. Anyone can trigger it; the wallet you connect only pays the network fee.</p>
+      <div class="row"><button class="btn" id="conn">Connect wallet</button><button class="btn pri" id="all" disabled>Pay out all ready coins</button><span class="muted small" id="who"></span></div>
+      <div class="log" id="alog" style="margin-top:12px"></div><div class="err" id="aerr"></div>
+    </div>
+    <div class="tw"><table><thead><tr><th>Coin</th><th>Venue</th><th>Launched</th><th class="n">Platform share</th><th class="n">Waiting in coin</th><th class="n">Platform part</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+    <p class="muted small" style="margin-top:12px">"Waiting in coin" is what the coin's vault holds now. "Platform part" is that amount times the platform share signed for the coin. Fees already paid out are not listed here; they are in the platform wallet.</p>
+  </div>
+</main>
+<script src="/launch.js" defer></script>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+function h(t,a,k){var e=document.createElement(t);for(var x in (a||{})){if(x==='text')e.textContent=a[x];else if(x==='class')e.className=a[x];else e.setAttribute(x,a[x])}(k||[]).forEach(function(c){if(c!=null)e.appendChild(typeof c==='string'?document.createTextNode(c):c)});return e}
+function ss(k,v){try{if(v===undefined)return sessionStorage.getItem(k);if(v===null)sessionStorage.removeItem(k);else sessionStorage.setItem(k,v)}catch(e){return null}}
+function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+function ago(t){var s=(Date.now()-t)/1000;if(s<3600)return Math.max(1,Math.floor(s/60))+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
+function ex(c,p){return 'https://explorer.solana.com/'+p+(c==='devnet'?'?cluster=devnet':'')}
+var D=null,pay=null,fees={},busy=false;
+function B(){return window.BurnerLaunch}
+function load(){
+  var t=ss('bp.admin');if(!t)return;$('gerr').textContent='';
+  fetch('/api/admin/launches',{method:'POST',headers:{Authorization:'Bearer '+t}}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Failed');return j})}).then(function(j){D=j;$('gate').hidden=true;$('dash').hidden=false;$('net').textContent=j.cluster==='mainnet'?'Mainnet':'Devnet';draw();readFees()},function(e){ss('bp.admin',null);$('gate').hidden=false;$('dash').hidden=true;$('gerr').textContent=e.message})}
+$('enter').onclick=function(){ss('bp.admin',$('tok').value.trim());$('tok').value='';load()};
+$('tok').addEventListener('keydown',function(e){if(e.key==='Enter')$('enter').click()});
+$('lock').onclick=function(){ss('bp.admin',null);D=null;$('dash').hidden=true;$('gate').hidden=false};
+$('refresh').onclick=function(){fees={};load()};
+function readFees(){
+  if(!B()){setTimeout(readFees,500);return}
+  var list=D.launches.filter(function(l){return l.split&&l.platformBps>0}),i=0;
+  function next(){if(i>=list.length){draw();return}var batch=list.slice(i,i+4);i+=4;Promise.all(batch.map(function(l){return B().distributableFees(D.cluster,l.mint).then(function(f){fees[l.mint]=f},function(){fees[l.mint]={err:1}})})).then(function(){draw();next()})}
+  next();
+  if(D.platform&&D.platform.wallet)B().balanceOf(D.cluster,D.platform.wallet).then(function(b){D.balance=b;draw()},function(){})}
+function draw(){
+  var L=D.launches,withFee=L.filter(function(l){return l.split&&l.platformBps>0}),waiting=0,mine=0,ready=0;
+  withFee.forEach(function(l){var f=fees[l.mint];if(f&&!f.err){waiting+=f.sol;mine+=f.sol*l.platformBps/10000;if(f.canDistribute)ready++}});
+  var st=$('stats');st.textContent='';
+  [['Coins launched',L.length],['With platform fee',withFee.length],['Waiting in coins',waiting.toFixed(4)+' SOL'],['Platform part waiting',mine.toFixed(6)+' SOL'],['Ready to pay out',ready],['Platform wallet',D.balance!=null?D.balance.toFixed(4)+' SOL':(D.platform&&D.platform.wallet?'…':'not set')]].forEach(function(x){st.appendChild(h('div',{class:'stat'},[h('small',{text:x[0]}),h('b',{text:String(x[1])})]))});
+  var rows=$('rows');rows.textContent='';
+  if(!L.length)rows.appendChild(h('tr',{},[h('td',{colspan:'8',class:'muted',text:'No launches yet.'})]));
+  L.forEach(function(l){var f=fees[l.mint],has=l.split&&l.platformBps>0,status=!has?'No platform fee':!f?'Reading…':f.err?'Unreadable':f.canDistribute?'Ready':'Below minimum';
+    var btn=h('button',{class:'btn sm',type:'button',text:'Pay out'});btn.disabled=!(f&&f.canDistribute&&pay&&!busy);btn.onclick=function(){run([l])};
+    rows.appendChild(h('tr',{},[h('td',{},[h('a',{href:'/coin/'+l.mint,style:'text-decoration:underline',text:l.name+' $'+l.symbol})]),h('td',{text:l.venue}),h('td',{text:ago(l.at)}),h('td',{class:'n',text:has?(l.platformBps/100)+'%':'–'}),h('td',{class:'n',text:f&&!f.err?f.sol.toFixed(6):'–'}),h('td',{class:'n',text:f&&!f.err?(f.sol*l.platformBps/10000).toFixed(6):'–'}),h('td',{text:status}),h('td',{},[btn])]))});
+  $('all').disabled=!(pay&&!busy&&ready>0)}
+$('conn').onclick=function(){var p=window.phantom&&window.phantom.solana||window.solana;if(!p)return $('aerr').textContent='No Solana wallet found in this browser.';p.connect().then(function(r){pay={wallet:p,address:r.publicKey.toString()};$('who').textContent='Paying network fees from '+short(pay.address);$('aerr').textContent='';draw()},function(e){$('aerr').textContent=e&&e.message||'Cancelled.'})};
+function logStep(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);$('alog').appendChild(row);return function(state,detail,href){row.className=state==='ok'?'ok':state==='warn'?'warn':'err';row.firstChild.textContent=state==='ok'?'✓':state==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(detail){sp.appendChild(document.createTextNode(' — '));if(href)sp.appendChild(h('a',{href:href,target:'_blank',rel:'noopener',text:detail}));else sp.appendChild(document.createTextNode(detail))}}}
+function run(list){if(busy||!pay)return;busy=true;$('aerr').textContent='';$('alog').textContent='';draw();var i=0;
+  (function nx(){if(i>=list.length){busy=false;fees={};setTimeout(function(){readFees()},2500);draw();return}var l=list[i++];$('alog').appendChild(h('div',{class:'muted small',text:l.name+' $'+l.symbol}));B().distributeCoinFees({cluster:D.cluster,wallet:pay.wallet,user:pay.address,mint:l.mint},logStep).then(nx,function(e){$('aerr').textContent=l.name+': '+(e&&e.message||'failed');busy=false;draw()})})()}
+$('all').onclick=function(){run(D.launches.filter(function(l){var f=fees[l.mint];return l.split&&l.platformBps>0&&f&&f.canDistribute}))};
+load();
+})();
+</script>
+</body>
+</html>
