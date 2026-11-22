@@ -941,3 +941,58 @@ export async function claimLaunchlabPlatformFees({ cluster, wallet, user, platfo
   await unwrapWsol({ step, conn, cfg, wallet, userKey }).catch(() => null);
   return sigs;
 }
+
+
+// ---------- Test trading (devnet) ----------
+// Buy and sell on a Meteora or LaunchLab coin from this site, so fees can be generated and claimed while testing.
+const ataOf = (owner, mint) => PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), mint.toBuffer()], ATA_PROGRAM)[0];
+
+// A wallet's balance of one coin: raw base units (as text) and whole tokens.
+export async function tokenBalance(cluster, owner, mint) {
+  const conn = new Connection(config(cluster).rpc, 'confirmed');
+  try {
+    const b = await conn.getTokenAccountBalance(ataOf(new PublicKey(owner), new PublicKey(mint)));
+    return { raw: b.value.amount, ui: Number(b.value.amount) / Math.pow(10, TOKEN_DECIMALS) };
+  } catch (e) { return { raw: '0', ui: 0 }; }
+}
+
+// side is 'buy' (amountSol of SOL) or 'sell' (sellPct percent of the wallet's balance of the coin).
+export async function tradeCoin({ cluster, wallet, user, venue, mint, pool, side, amountSol, sellPct, platform }, step) {
+  const cfg = config(cluster);
+  const conn = new Connection(cfg.rpc, 'confirmed');
+  const userKey = new PublicKey(user), mintKey = new PublicKey(mint);
+  if (side !== 'buy' && side !== 'sell') throw new Error('Choose buy or sell.');
+  let amountIn;
+  await phase(step, 'Check balances', async (done) => {
+    await checkNetwork(conn, cfg);
+    const sol = (await conn.getBalance(userKey)) / LAMPORTS_PER_SOL;
+    if (side === 'buy') {
+      if (!(amountSol > 0)) throw new Error('Enter an amount of SOL to spend.');
+      if (sol < amountSol + 0.01) throw new Error('Balance is ' + sol.toFixed(3) + ' SOL. That buy plus fees needs about ' + (amountSol + 0.01).toFixed(3) + ' SOL.');
+      amountIn = new BN(Math.round(amountSol * 1e9));
+      done('ok', 'Spending ' + amountSol + ' SOL of ' + sol.toFixed(3));
+    } else {
+      const bal = await tokenBalance(cluster, user, mint);
+      if (!(Number(bal.raw) > 0)) throw new Error('This wallet holds none of this coin.');
+      if (sol < 0.005) throw new Error('Balance is ' + sol.toFixed(4) + ' SOL, which is not enough for the network fee.');
+      amountIn = new BN(bal.raw).muln(Math.max(1, Math.min(100, Math.round(sellPct || 100)))).divn(100);
+      done('ok', 'Selling ' + (Number(amountIn.toString()) / Math.pow(10, TOKEN_DECIMALS)).toLocaleString() + ' tokens');
+    }
+  });
+  const tx = await phase(step, 'Build ' + side + ' transaction', async (done) => {
+    let t;
+    if (venue === 'meteora') {
+      t = await dbc(conn).pool.swap({ amountIn, minimumAmountOut: new BN(0), swapBaseForQuote: side === 'sell', owner: userKey, pool: new PublicKey(pool), referralTokenAccount: null });
+      t.feePayer = userKey; t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
+    } else if (venue === 'raydium') {
+      const raydium = await raydiumFor(cluster, conn, userKey);
+      await raydium.account.fetchWalletTokenAccounts().catch(() => null);
+      const common = { programId: llProgram(cluster), mintA: mintKey, slippage: new BN(500), txVersion: TxVersion.V0 };
+      const out = side === 'buy' ? await raydium.launchpad.buyToken({ ...common, buyAmount: amountIn }) : await raydium.launchpad.sellToken({ ...common, sellAmount: amountIn });
+      t = out.transaction;
+    } else throw new Error('Trading here is only for Meteora and Raydium LaunchLab coins. pump.fun coins trade on pump.fun.');
+    done('ok', side === 'buy' ? 'Buy with up to 5% slippage' : 'Sell with up to 5% slippage');
+    return t;
+  });
+  return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (' + side + ')', sign: 'Sign ' + side, send: 'Send ' + side } });
+}

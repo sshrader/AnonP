@@ -57,6 +57,40 @@ function meteoraFill(j,mc,ph){
 function launchlabFill(j,mc,ph){
   var tries=0;(function go(){if(!window.BurnerLaunch){if(tries++<40)return setTimeout(go,250);ph.textContent='Curve data is not available right now.';return}
     window.BurnerLaunch.launchlabCurve(j.cluster,j.pool).then(function(m){ph.remove();var st=h('div',{class:'stats'});st.appendChild(stat('Market cap',fx(m.mcSol,1)+' SOL'));st.appendChild(stat('Raised',fx(m.raisedSol,2)+' / '+fx(m.targetSol,0)+' SOL'));st.appendChild(stat('Curve',m.migrated?'Graduated':fx(m.progress,1)+'%'));st.appendChild(stat('Pool',j.pool.slice(0,4)+'…'+j.pool.slice(-4)));mc.appendChild(st);mc.appendChild(h('div',{class:'bar'},[h('i',{style:'width:'+Math.min(100,m.progress||0)+'%'})]))},function(){ph.textContent='Curve data is not available right now.'})})()}
+var Bn=function(){return window.BurnerLaunch};
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function tradeCard(j,right){
+  var c=h('div',{class:'card'},[h('h2',{text:'Test trading'})]);
+  c.appendChild(h('p',{class:'muted small',style:'margin:0 0 12px',text:'Devnet only. Trades here create fees you can claim, with no slippage protection beyond 5%.'}));
+  var T={who:null},busy=false;
+  var wsel=h('select',{style:'margin-bottom:10px'});
+  var raw=lsGet('burnerpad.burner');if(raw)wsel.appendChild(h('option',{value:'burner',text:'Burner in this browser'}));
+  wsel.appendChild(h('option',{value:'phantom',text:'Phantom'}));
+  var info=h('div',{class:'muted small',style:'margin:0 0 10px;overflow-wrap:anywhere'});
+  var amt=h('input',{type:'number',min:'0',step:'0.01',value:'0.1',style:'max-width:110px'});
+  var buy=h('button',{class:'btn sm pri',type:'button',text:'Buy'});
+  var sells=[25,50,100].map(function(pc){var b=h('button',{class:'btn sm',type:'button',text:'Sell '+pc+'%'});b.onclick=function(){go('sell',pc)};return b});
+  var err=h('div',{class:'err small'}),log=h('div',{class:'log',style:'margin-top:10px'});
+  c.appendChild(wsel);c.appendChild(info);
+  c.appendChild(h('div',{style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px'},[amt,h('span',{class:'muted small',text:'SOL'}),buy]));
+  c.appendChild(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},sells));c.appendChild(err);c.appendChild(log);
+  function signer(){
+    if(wsel.value==='burner'){try{var b=Bn().burnerFromSecret(JSON.parse(lsGet('burnerpad.burner')));return Promise.resolve({wallet:b.wallet,address:b.address})}catch(e){return Promise.reject(new Error('Could not load the burner.'))}}
+    var p=window.phantom&&window.phantom.solana||window.solana;if(!p)return Promise.reject(new Error('No Solana wallet found in this browser.'));
+    return p.connect().then(function(r){return{wallet:p,address:r.publicKey.toString()}});
+  }
+  function refresh(){
+    if(!Bn())return;info.textContent='Reading…';
+    signer().then(function(sg){return Promise.all([Bn().balanceOf(j.cluster,sg.address),Bn().tokenBalance(j.cluster,sg.address,j.mint)]).then(function(r){info.textContent=sg.address.slice(0,4)+'…'+sg.address.slice(-4)+' holds '+(+r[0]).toFixed(4)+' SOL and '+fx(r[1].ui,0)+' $'+j.symbol})}).then(null,function(e){info.textContent=e.message})}
+  wsel.onchange=refresh;
+  function step(label){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);log.appendChild(row);return function(st,d,href){row.className=st==='ok'?'ok':st==='warn'?'warn':'err';row.firstChild.textContent=st==='ok'?'✓':st==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(d){sp.appendChild(document.createTextNode(' — '));if(href)sp.appendChild(h('a',{href:href,target:'_blank',rel:'noopener',text:d}));else sp.appendChild(document.createTextNode(d))}}}
+  function go(side,pc){
+    if(busy||!Bn())return;busy=true;err.textContent='';log.textContent='';
+    signer().then(function(sg){return Bn().tradeCoin({cluster:j.cluster,wallet:sg.wallet,user:sg.address,venue:j.venue,mint:j.mint,pool:j.pool,side:side,amountSol:+amt.value,sellPct:pc},step)}).then(function(){setTimeout(refresh,2000)},function(e){err.textContent=e&&e.message||'That did not go through.'}).then(function(){busy=false})}
+  buy.onclick=function(){go('buy')};
+  var tries=0;(function wait(){if(Bn())return refresh();if(tries++<40)setTimeout(wait,250)})();
+  return c;
+}
 function render(j){
   var n=document.getElementById('net');n.textContent=j.cluster==='mainnet'?'Mainnet':'Devnet';if(j.cluster==='mainnet')n.className='net main';
   document.title=j.name+' ($'+j.symbol+') · BurnerPad';
@@ -80,6 +114,7 @@ function render(j){
   else if(j.venue==='raydium'&&j.pool){var rph=h('p',{class:'muted small',style:'margin:0',text:'Reading the curve…'});mc.appendChild(rph);launchlabFill(j,mc,rph)}
   else mc.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Curve data is not available right now.'}));
   right.appendChild(mc);
+  if(j.cluster==='devnet'&&j.pool&&(j.venue==='meteora'||j.venue==='raydium'))right.appendChild(tradeCard(j,right));
   // links
   var lc=h('div',{class:'card'},[h('h2',{text:'Links'})]);var lk=h('div',{class:'links'});
   if(j.venue==='pump')lk.appendChild(h('a',{class:'btn sm',href:'https://pump.fun/coin/'+j.mint,target:'_blank',rel:'noopener',text:'pump.fun'}));else lk.appendChild(h('a',{class:'btn sm',href:'https://jup.ag/tokens/'+j.mint,target:'_blank',rel:'noopener',text:'Jupiter'}));
