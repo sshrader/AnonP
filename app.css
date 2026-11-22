@@ -130,12 +130,3 @@ nav a .ic{width:18px;height:18px;flex:none;display:none}
 @media(min-width:900px){body.sb header.top .wallet{margin:auto 0 0 4px;align-self:stretch}body.sb header.top .wallet .wbtn{width:100%;margin:0}body.sb header.top .wallet + .net{margin-top:0}.wmenu{bottom:calc(100% + 8px);left:0;right:0}}
 @media(max-width:899px){header.top .wallet{margin-left:auto}header.top .wallet .wbtn{margin:0}.wmenu{top:calc(100% + 8px);right:0}}
 @media(max-width:560px){header.top .wallet{margin-left:auto;flex:none}}
-
-.strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 22px;font-size:13px;color:var(--fg)}
-.strip i{font-style:normal;font:11px var(--mono,monospace);color:var(--mut);margin-right:6px}
-.strip em{font-style:normal;color:var(--mut)}
-.strip u{text-decoration:none;color:var(--mut);margin-left:auto;font-size:12px}
-.strip u a{color:var(--fg);text-decoration:underline}
-@media(max-width:700px){.strip u{margin-left:0;width:100%}}
-.hflame{left:auto;right:4%;top:50%;width:min(300px,40%);transform:translateY(-50%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 40%);mask-image:linear-gradient(90deg,transparent,#000 40%)}
-@media(max-width:700px){.hflame{opacity:.5;width:60%}}
