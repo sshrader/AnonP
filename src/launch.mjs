@@ -256,12 +256,14 @@ export async function distributeCoinFees({ cluster, wallet, user, mint }, step) 
     const mintKey = new PublicKey(mint);
     const info = await distributableFees(cluster, mint);
     if (!info.canDistribute) throw new Error('Not enough fees to pay out yet (' + info.sol.toFixed(6) + ' SOL waiting, ' + info.min.toFixed(6) + ' needed).');
-    const built = await online.buildDistributeCreatorFeesInstructions(mintKey);
+    // payer signs the creator-fee sweeps that run first when trades left fees behind in the curve or pool.
+    const built = await online.buildDistributeCreatorFeesInstructions(mintKey, { payer: userKey });
     const ixs = Array.isArray(built) ? built : built.instructions;
+    const sweeps = built && built.sweepCount ? built.sweepCount : 0;
     const t = new Transaction().add(...ixs);
     t.feePayer = userKey;
     t.recentBlockhash = (await conn.getLatestBlockhash('confirmed')).blockhash;
-    done('ok', 'Paying out about ' + info.sol.toFixed(6) + ' SOL to the shareholders');
+    done('ok', 'Paying out about ' + info.sol.toFixed(6) + ' SOL to the shareholders' + (sweeps ? ' (after sweeping fees from ' + sweeps + ' source' + (sweeps === 1 ? '' : 's') + ')' : ''));
     return t;
   });
   return await signAndSend({ step, conn, cfg, wallet, tx, labels: { dry: 'Dry run (payout)', sign: 'Approve payout', send: 'Send payout' } });
