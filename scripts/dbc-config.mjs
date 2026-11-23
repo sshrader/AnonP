@@ -1,4 +1,4 @@
-// One-time setup: creates the BurnerPad bonding-curve config on Meteora. Every Meteora coin launched here is a pool made
+// One-time setup: creates the BurnPad bonding-curve config on Meteora. Every Meteora coin launched here is a pool made
 // from this config, so these numbers set the curve shape and the fees. On mainnet they are permanent.
 //
 //   node --env-file=.env scripts/dbc-config.mjs --check     print the settings and send nothing

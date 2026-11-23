@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>BurnerPad</title>
+<title>BurnPad</title>
 <meta name="description" content="Launch a token from a fresh one-time wallet you create and fund yourself. Non-custodial. No pool.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,7 +94,7 @@ html,body{overflow-x:clip}
 </head>
 <body class="sb">
 <header class="top"><div class="wrap">
-  <a class="logo" href="/"><svg class="flame" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#d9d9d9"/><stop offset="1" stop-color="#ffffff"/></linearGradient><linearGradient id="fg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8a8a8a"/><stop offset="1" stop-color="#cfcfcf"/></linearGradient></defs><path class="fo" d="M32 4c4 10 17 17 17 33a17 17 0 0 1-34 0c0-7 3-11 7-15 0 6 3 8 6 8-3-11 0-19 4-26z" fill="url(#fg1)"/><path class="fi" d="M32 30c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 2 4 3 4-1-5 0-8 1-11z" fill="url(#fg2)"/></svg>BurnerPad</a>
+  <a class="logo" href="/"><svg class="flame" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#d9d9d9"/><stop offset="1" stop-color="#ffffff"/></linearGradient><linearGradient id="fg2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#8a8a8a"/><stop offset="1" stop-color="#cfcfcf"/></linearGradient></defs><path class="fo" d="M32 4c4 10 17 17 17 33a17 17 0 0 1-34 0c0-7 3-11 7-15 0 6 3 8 6 8-3-11 0-19 4-26z" fill="url(#fg1)"/><path class="fi" d="M32 30c2 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 2 4 3 4-1-5 0-8 1-11z" fill="url(#fg2)"/></svg>BurnPad</a>
   <nav><a href="#explore" id="nav-explore"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Explore</span></a><a href="#launch" id="nav-launch"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3 3 4.5 6 4.5 9.5a4.5 4.5 0 0 1-9 0C7.5 9 9 6 12 3z"/><path d="M12 17v4"/></svg><span>Launch</span></a><a href="#claim" id="nav-claim"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg><span>Claim fees</span></a><a href="#docs" id="nav-docs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg><span>Docs</span></a></nav>
   <div class="wallet"><button class="btn sm wbtn" id="wbtn" type="button" aria-haspopup="menu" aria-expanded="false">Connect wallet</button><div class="wmenu" id="wmenu" role="menu" hidden></div></div>
   <span class="net" id="net">…</span>
@@ -105,7 +105,7 @@ html,body{overflow-x:clip}
 <section id="v-explore" hidden>
   <div class="hero heroFx"><canvas id="fx" aria-hidden="true"></canvas>
     <h1>Launch from a wallet<br>that is not your wallet.</h1>
-    <p class="lede">BurnerPad makes a fresh one-time wallet in your browser, you fund it yourself, and the coin launches from it. We never hold your money and the key never leaves your device.</p>
+    <p class="lede">BurnPad makes a fresh one-time wallet in your browser, you fund it yourself, and the coin launches from it. We never hold your money and the key never leaves your device.</p>
     <p style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn pri" href="#launch">Launch a coin</a><a class="btn" href="#docs">Docs</a></p>
   </div>
   <div class="ticker" id="ticker" hidden><div class="trk" id="trk"></div></div>
@@ -211,7 +211,7 @@ html,body{overflow-x:clip}
     </aside>
     <article class="docs-body">
       <section id="d-overview"><h1>Docs</h1>
-        <p class="lede">BurnerPad is a launcher, not a mixer. It makes a fresh wallet in your browser, so your main wallet stays out of the launch transaction. It does not hide where the money came from.</p></section>
+        <p class="lede">BurnPad is a launcher, not a mixer. It makes a fresh wallet in your browser, so your main wallet stays out of the launch transaction. It does not hide where the money came from.</p></section>
 
       <section id="d-flow"><h2>The flow</h2>
         <ol class="steps">
@@ -219,14 +219,14 @@ html,body{overflow-x:clip}
           <li><i>2</i><b>Fund it</b><span>Send it SOL from a wallet or exchange you choose.</span></li>
           <li><i>3</i><b>Pick a venue</b><span>pump.fun, Meteora or Raydium LaunchLab. Add a name, ticker and image.</span></li>
           <li><i>4</i><b>Launch</b><span>The burner signs the launch and your first buy, in one transaction where the venue allows.</span></li>
-          <li><i>5</i><b>Listed and checked</b><span>BurnerPad verifies it on-chain and shows public checks on the coin page.</span></li>
+          <li><i>5</i><b>Listed and checked</b><span>BurnPad verifies it on-chain and shows public checks on the coin page.</span></li>
           <li><i>6</i><b>Earn fees</b><span>Traders pay trading fees. A share is yours, set by the venue.</span></li>
           <li><i>7</i><b>Claim</b><span>Claim fees on the Claim fees page, with the burner's key.</span></li>
           <li><i>8</i><b>Sweep</b><span>Move what is left out of the burner, when you choose to.</span></li>
         </ol></section>
 
       <section id="d-wallets"><h2>Burner wallets</h2>
-        <p>A burner is a new keypair made in this browser. BurnerPad never sees the private key and never stores it. You fund it yourself, so BurnerPad never holds your money.</p>
+        <p>A burner is a new keypair made in this browser. BurnPad never sees the private key and never stores it. You fund it yourself, so BurnPad never holds your money.</p>
         <ul>
           <li><b>Back it up before you fund it.</b> Use Download backup on the launch page. Clearing browser data can erase the key, and a lost key means lost funds.</li>
           <li><b>Phantom works too.</b> You can launch from a wallet you already have. Then the launch is linked to that wallet.</li>
@@ -243,7 +243,7 @@ html,body{overflow-x:clip}
 
       <section id="d-fees"><h2>Fees</h2>
         <div id="docfees" class="stack"><p class="muted">Loading…</p></div>
-        <p class="muted small">Nothing is taken from your first buy or from your burner. Network fees and rent go to Solana, not to BurnerPad.</p></section>
+        <p class="muted small">Nothing is taken from your first buy or from your burner. Network fees and rent go to Solana, not to BurnPad.</p></section>
 
       <section id="d-claiming"><h2>Claiming</h2>
         <ul>
@@ -266,17 +266,17 @@ html,body{overflow-x:clip}
         </ul></section>
 
       <section id="d-faq"><h2>FAQ</h2>
-        <details><summary>Can BurnerPad move my funds?</summary><p>No. Every transaction is signed in your browser. The server only stores coin names, images and the launch record.</p></details>
+        <details><summary>Can BurnPad move my funds?</summary><p>No. Every transaction is signed in your browser. The server only stores coin names, images and the launch record.</p></details>
         <details><summary>Is this anonymous?</summary><p>No. It separates your main wallet from the launch, but the funding transfer is public. Treat it as separation, not secrecy.</p></details>
         <details><summary>What does Devnet mean?</summary><p>A practice network with free test SOL. Nothing on it has value. The badge at the top shows which network you are on.</p></details>
-        <details><summary>Does BurnerPad trade or sell coins?</summary><p>No. It launches coins and lists them. Trading happens on the venue.</p></details>
+        <details><summary>Does BurnPad trade or sell coins?</summary><p>No. It launches coins and lists them. Trading happens on the venue.</p></details>
       </section>
     </article>
   </div>
 </section>
 
 </main>
-<footer><div class="wrap">BurnerPad is a non-custodial tool. Tokens are risky; nothing here is financial advice. Check every coin yourself.</div></footer>
+<footer><div class="wrap">BurnPad is a non-custodial tool. Tokens are risky; nothing here is financial advice. Check every coin yourself.</div></footer>
 
 <script src="/launch.js" defer></script>
 <script>
@@ -295,9 +295,9 @@ var S={meteora:null,raydium:null,cluster:'devnet',platform:null,venues:[],venue:
 // ---------- routing ----------
 function docFees(){var b=$('docfees');if(!b)return;b.textContent='';
   function card(t,txt){b.appendChild(h('div',{class:'card'},[h('h3',{text:t}),h('p',{text:txt})]))}
-  card('pump.fun',S.platform?'Traders pay pump.fun\'s normal fee, and the creator earns a share of it. BurnerPad takes '+(S.platform.bps/100)+'% of that creator share, set by a fee-split transaction you sign at launch.':'No platform fee is set on this server.');
-  if(S.meteora){var m=S.meteora,tot=m.feeBps/100;card('Meteora','Every trade pays '+tot+'%. Meteora keeps 20% of it. '+(m.creatorPct>0?'Of the rest, '+m.creatorPct+'% goes to the creator and the remainder to BurnerPad.':'The rest goes to BurnerPad on this config, and the creator earns nothing from trading fees.')+' These are fixed in the curve config on-chain.')}
-  if(S.raydium){var r=S.raydium;card('Raydium LaunchLab','Every trade pays about '+(r.feePct+r.creatorPct+0.25).toFixed(2)+'%: Raydium takes 0.25%, BurnerPad '+r.feePct+'%, and the creator earns '+r.creatorPct+'%. These rates are set in the platform account on-chain.')}}
+  card('pump.fun',S.platform?'Traders pay pump.fun\'s normal fee, and the creator earns a share of it. BurnPad takes '+(S.platform.bps/100)+'% of that creator share, set by a fee-split transaction you sign at launch.':'No platform fee is set on this server.');
+  if(S.meteora){var m=S.meteora,tot=m.feeBps/100;card('Meteora','Every trade pays '+tot+'%. Meteora keeps 20% of it. '+(m.creatorPct>0?'Of the rest, '+m.creatorPct+'% goes to the creator and the remainder to BurnPad.':'The rest goes to BurnPad on this config, and the creator earns nothing from trading fees.')+' These are fixed in the curve config on-chain.')}
+  if(S.raydium){var r=S.raydium;card('Raydium LaunchLab','Every trade pays about '+(r.feePct+r.creatorPct+0.25).toFixed(2)+'%: Raydium takes 0.25%, BurnPad '+r.feePct+'%, and the creator earns '+r.creatorPct+'%. These rates are set in the platform account on-chain.')}}
 var docsDone=false;
 function docsInit(){if(docsDone)return;docsDone=true;
   var links=document.querySelectorAll('.docs-nav a[data-s]');
@@ -358,7 +358,7 @@ function backupBlock(){var wrap=h('div');
   [rv,ck,dl].forEach(function(x){row.appendChild(x)});wrap.appendChild(row);wrap.appendChild(keybox);
   return wrap}
 function drawBurner(){var box=$('m-burner');box.textContent='';
-  if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0 0 12px',text:'A new wallet is made in this browser. The private key is never sent to BurnerPad.'}));box.appendChild(fundToggle());var b=h('button',{class:'btn pri',type:'button',text:'Generate burner wallet'});b.onclick=function(){if(!B())return fail('The launcher is still loading. Try again in a moment.');S.burner=B().newBurner();if(S.useFunder){S.funder=B().newBurner();ls('burnerpad.funder',JSON.stringify(S.funder.secret))}S.saved=false;ls('burnerpad.burner',JSON.stringify(S.burner.secret));ls('burnerpad.saved','0');drawBurner();pollBal();updateAll()};box.appendChild(b);return}
+  if(!S.burner){box.appendChild(h('p',{class:'muted small',style:'margin:0 0 12px',text:'A new wallet is made in this browser. The private key is never sent to BurnPad.'}));box.appendChild(fundToggle());var b=h('button',{class:'btn pri',type:'button',text:'Generate burner wallet'});b.onclick=function(){if(!B())return fail('The launcher is still loading. Try again in a moment.');S.burner=B().newBurner();if(S.useFunder){S.funder=B().newBurner();ls('burnerpad.funder',JSON.stringify(S.funder.secret))}S.saved=false;ls('burnerpad.burner',JSON.stringify(S.burner.secret));ls('burnerpad.saved','0');drawBurner();pollBal();updateAll()};box.appendChild(b);return}
   box.appendChild(fundToggle());if(S.useFunder&&S.funder)drawFunder(box);
   var a=h('div',{class:'addr'},[h('code',{text:S.burner.address})]);var cb=h('button',{class:'btn sm',type:'button',text:'Copy'});cb.onclick=function(){copy(S.burner.address,cb)};a.appendChild(cb);
   box.appendChild(h('label',{text:S.useFunder&&S.funder?'Launch wallet address':'Burner address (send SOL here from a wallet you control)'}));box.appendChild(a);
@@ -408,8 +408,8 @@ function updateAll(){
   row('Venue',(S.venues.filter(function(v){return v.id===S.venue})[0]||{}).name||'pump.fun');
   row('First buy',buy.toFixed(3)+' SOL');
   row('Network fees and rent','~'+(S.cluster==='mainnet'?'0.04':'0.06')+' SOL');
-  if(S.venue==='meteora'&&mFee())row('Trading fee',mFee().trade+'% per trade');else if(S.venue==='raydium'&&rFee())row('Trading fee',rFee().trade+'% per trade');else row('BurnerPad fee',feeBps()?(feeBps()/100)+'% of creator fees':'none');
-  var fn=$('feenote');if(S.venue==='raydium'&&rFee())fn.textContent='Every trade pays about '+rFee().trade+'%: Raydium takes 0.25%, the platform '+S.raydium.feePct+'%, and you, as the creator, earn '+rFee().you+'% of every trade. These rates are set in the platform account on-chain, so nothing extra is signed and nothing is taken from your buy.';else if(S.venue==='meteora'&&mFee())fn.textContent='Every trade pays a '+mFee().trade+'% fee. Meteora keeps 20% of it. You, as the creator, earn about '+mFee().you+'% of every trade; the platform gets the rest. This is built into the curve, so nothing extra is signed and nothing is taken from your buy.';else fn.textContent=feeBps()?('BurnerPad takes '+(feeBps()/100)+'% of the coin\'s ongoing creator fees. It is set in a fee-split transaction that you sign and that anyone can read on-chain. Nothing is taken from your buy.'):'No platform fee is set on this server.';
+  if(S.venue==='meteora'&&mFee())row('Trading fee',mFee().trade+'% per trade');else if(S.venue==='raydium'&&rFee())row('Trading fee',rFee().trade+'% per trade');else row('BurnPad fee',feeBps()?(feeBps()/100)+'% of creator fees':'none');
+  var fn=$('feenote');if(S.venue==='raydium'&&rFee())fn.textContent='Every trade pays about '+rFee().trade+'%: Raydium takes 0.25%, the platform '+S.raydium.feePct+'%, and you, as the creator, earn '+rFee().you+'% of every trade. These rates are set in the platform account on-chain, so nothing extra is signed and nothing is taken from your buy.';else if(S.venue==='meteora'&&mFee())fn.textContent='Every trade pays a '+mFee().trade+'% fee. Meteora keeps 20% of it. You, as the creator, earn about '+mFee().you+'% of every trade; the platform gets the rest. This is built into the curve, so nothing extra is signed and nothing is taken from your buy.';else fn.textContent=feeBps()?('BurnPad takes '+(feeBps()/100)+'% of the coin\'s ongoing creator fees. It is set in a fee-split transaction that you sign and that anyone can read on-chain. Nothing is taken from your buy.'):'No platform fee is set on this server.';
   var rb=$('recipbox');
   if(S.mode==='burner'&&S.venue==='pump'){rb.hidden=false;if(!rb.firstChild){rb.appendChild(h('label',{for:'recip',text:'Creator fees go to'}));var sel=h('select',{id:'recip'});sel.appendChild(h('option',{value:'burner',text:'The burner wallet (claim with its key)'}));sel.appendChild(h('option',{value:'custom',text:'Another address I enter'}));rb.appendChild(sel);var inp=h('input',{id:'recipaddr',placeholder:'Solana address',hidden:'',style:'margin-top:8px'});rb.appendChild(inp);rb.appendChild(h('div',{class:'muted small',style:'margin-top:6px',text:'Sending fees to a wallet you own links it to the burner on-chain.'}));sel.onchange=function(){inp.hidden=sel.value!=='custom'}}}else rb.hidden=true;
   var ready=!S.busy&&!!S.imgData&&$('name').value.trim()&&$('sym').value.trim();
@@ -449,7 +449,7 @@ $('go').addEventListener('click',function(){
     if(S.venue==='meteora')return B().createCoinMeteora({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,dbcConfig:S.meteora.config},step);
     return B().createCoin({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,shareholders:sh,allowSplitFallback:S.cluster==='devnet'},step)}).then(function(out){
       if(afterPick()==='gmgn')tabGo(gmgnUrl(out.mint));
-      var d2=step('List on BurnerPad');
+      var d2=step('List on BurnPad');
       return api('/api/launched',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mint:out.mint,signature:out.signature,metaId:meta.id,venue:S.venue,pool:out.pool||'',splitSignature:out.splitSignature||'',burner:S.mode==='burner'})}).then(function(){d2('ok','Listed');finish(out)},function(e){d2('warn','Not listed: '+e.message);finish(out)})
     }).catch(function(e){tabClose();S.busy=false;fail(e&&e.message||'Launch failed.');updateAll()})});
 function finish(out){S.busy=false;if(afterPick()==='coin')tabGo('/coin/'+out.mint);else if(afterPick()==='gmgn')tabGo(gmgnUrl(out.mint));tabW=null;var box=$('result');box.textContent='';var c=h('div',{class:'done'});c.appendChild(h('b',{text:'Launched.'}));var cab=h('button',{class:'btn sm',type:'button',text:'Copy CA'});cab.onclick=function(){copy(out.mint,cab)};c.appendChild(h('div',{class:'addr',style:'margin:8px 0 12px'},[h('code',{style:'overflow-wrap:anywhere',text:out.mint}),cab]));
@@ -474,7 +474,7 @@ function setSigner(sg){if(!B())return cfail('The launcher is still loading. Try 
 function loadClaims(){
   var sg=C.signer,box=$('ccoins');box.textContent='Loading…';var vb=$('cvaultbody');vb.textContent='';vb.appendChild(h('p',{class:'muted small',style:'margin:0',text:'Reading…'}));
   B().creatorFees(S.cluster,sg.address).then(function(sol){vb.textContent='';vb.appendChild(h('div',{class:'bal',style:'margin-top:0'},[h('span',{class:'muted small',text:'Waiting'}),h('b',{text:sol.toFixed(6)+' SOL'})]));vb.appendChild(h('p',{class:'muted small',style:'margin:0 0 10px',text:'Fees from coins launched without a split. Sent to this wallet.'}));var cb=h('button',{class:'btn sm',type:'button',text:'Claim'});if(!(sol>0))cb.disabled=true;cb.onclick=function(){runClaim(cb,function(){return B().claimCreatorFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address},csay)})};vb.appendChild(cb);if(S.raydium)B().launchlabCreatorFees(S.cluster,sg.address).then(function(ls){var w=h('div',{style:'margin-top:16px'});w.appendChild(h('div',{class:'bal',style:'margin-top:0'},[h('span',{class:'muted small',text:'Raydium LaunchLab'}),h('b',{text:ls.toFixed(6)+' SOL'})]));w.appendChild(h('p',{class:'muted small',style:'margin:0 0 10px',text:'Creator fees from all of this wallet\'s LaunchLab coins, paid out as SOL.'}));var lb=h('button',{class:'btn sm',type:'button',text:'Claim'});if(!(ls>0))lb.disabled=true;lb.onclick=function(){runClaim(lb,function(){return B().claimLaunchlabCreatorFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address},csay)})};w.appendChild(lb);vb.appendChild(w)},function(){})},function(e){vb.textContent='Could not read: '+e.message});
-  api('/api/mycoins?wallet='+encodeURIComponent(sg.address)).then(function(j){box.textContent='';if(!j.coins.length){box.appendChild(h('div',{class:'empty',text:'No coins from BurnerPad were launched by this wallet.'}));return}
+  api('/api/mycoins?wallet='+encodeURIComponent(sg.address)).then(function(j){box.textContent='';if(!j.coins.length){box.appendChild(h('div',{class:'empty',text:'No coins from BurnPad were launched by this wallet.'}));return}
     var mCoins=j.coins.filter(function(c){return c.venue==='meteora'});if(mCoins.length)B().meteoraCreatorFees(S.cluster,sg.address).then(function(rows){var by={};rows.forEach(function(r){by[r.pool]=r});mCoins.forEach(function(c){var r=by[c.pool],el=document.getElementById('mc-'+c.mint);if(!el)return;var amt=el.querySelector('.amt'),btn=el.querySelector('button');if(!r){amt.textContent='0 SOL';return}amt.textContent=r.sol.toFixed(6)+' SOL';amt.className='amt';btn.disabled=!(r.sol>0);btn.onclick=function(){runClaim(btn,function(){return B().claimMeteoraCreatorFees({cluster:S.cluster,wallet:sg.wallet,user:sg.address,pool:c.pool,raw:r.raw},csay)})}})},function(){mCoins.forEach(function(c){var el=document.getElementById('mc-'+c.mint);if(el)el.querySelector('.amt').textContent='unreadable'})});
     j.coins.forEach(function(c){var amt=h('span',{class:'amt muted',text:c.split?'…':'no split'});var isM=c.venue==='meteora',isR=c.venue==='raydium';if(isM){amt.textContent='…'}if(isR){amt.textContent='in the LaunchLab total above'}var btn=h('button',{class:'btn sm',type:'button',text:isM?'Claim':'Pay out'});btn.disabled=true;var img=h('img',{alt:''});if(c.image)img.src=c.image;
       var rowEl=h('div',{class:'crow',id:isM?'mc-'+c.mint:null},[img,h('div',{class:'ci'},[h('b',{text:c.name}),h('span',{class:'mono',text:'$'+c.symbol+(c.platformBps?' · '+c.platformBps/100+'% platform':'')})]),amt,btn,h('a',{class:'btn sm',href:'/coin/'+c.mint,text:'Page'})]);if(!isM)rowEl.removeAttribute('id');box.appendChild(rowEl);

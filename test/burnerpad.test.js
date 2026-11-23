@@ -52,7 +52,7 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   let r = await call('GET', '/api/state');
   check('state: devnet by default, 3 venues, only pump live', r.json.cluster === 'devnet' && r.json.venues.length === 3 && r.json.venues.filter((v) => v.live).map((v) => v.id).join() === 'pump');
   check('state: platform fee 1% published', r.json.platform && r.json.platform.bps === 100 && r.json.platform.wallet === platform);
-  r = await call('GET', '/'); check('index served', r.status === 200 && /BurnerPad/.test(r.text) && r.headers['x-frame-options'] === 'DENY');
+  r = await call('GET', '/'); check('index served', r.status === 200 && /BurnPad/.test(r.text) && r.headers['x-frame-options'] === 'DENY');
   r = await call('GET', '/coin/' + addr()); check('coin page served', r.status === 200);
   r = await call('GET', '/app.css'); check('css served', r.status === 200 && /text\/css/.test(r.headers['content-type']));
   r = await call('POST', '/api/rpc/mainnet', { method: 'getSlot', params: [] }); check('mainnet rpc proxy off on devnet', r.status === 404);

@@ -1,15 +1,15 @@
-# BurnerPad
+# BurnPad
 
 A non-custodial token launcher. Launch from a **fresh one-time wallet** that your browser creates and you fund yourself.
 
-- **No pool, no custody.** BurnerPad never holds funds and never sees a private key. The burner's key is generated in the browser and stays there.
+- **No pool, no custody.** BurnPad never holds funds and never sees a private key. The burner's key is generated in the browser and stays there.
 - **Multi-venue.** pump.fun is live. Meteora (Dynamic Bonding Curve) goes live once you create its curve config and set `DBC_CONFIG`. Raydium LaunchLab goes live once you create its platform and set `LAUNCHLAB_PLATFORM`.
 - **Clear fee.** A platform share of creator fees is set by a fee-split transaction the creator signs. It is shown before launch and on the coin page. Nothing is taken from your buy.
 - **Public trust checks** on every coin page: mint and freeze authority, creator holdings, top-10 concentration, launch-block buyers. They describe what is on-chain; they are not a safety rating.
 
 ## What it does not do
 
-BurnerPad separates the *launch wallet* from your main wallet. It does **not** hide where the money came from. If you fund the burner directly from your main wallet, that link is visible on-chain, and so is sweeping leftovers or fees back to it. For real separation, fund the burner from an account that is not tied to you. There is deliberately no shielded or pooled deposit/withdraw feature.
+BurnPad separates the *launch wallet* from your main wallet. It does **not** hide where the money came from. If you fund the burner directly from your main wallet, that link is visible on-chain, and so is sweeping leftovers or fees back to it. For real separation, fund the burner from an account that is not tied to you. There is deliberately no shielded or pooled deposit/withdraw feature.
 
 ## Run
 

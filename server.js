@@ -1,5 +1,5 @@
 'use strict';
-// BurnerPad: a non-custodial token launcher. The server only hosts metadata, relays RPC, verifies launches on-chain and
+// BurnPad: a non-custodial token launcher. The server only hosts metadata, relays RPC, verifies launches on-chain and
 // lists them. It never sees a private key and never holds funds.
 const http = require('http');
 const fs = require('fs');
@@ -244,7 +244,7 @@ async function coinInfo(res, mint) {
   const c = cfg();
   if (!B58_RE.test(mint)) return send(res, 404, { error: 'No such coin.' });
   const rec = loadLaunches(c).find((l) => l.mint === mint);
-  if (!rec) return send(res, 404, { error: 'That coin was not launched from BurnerPad.' });
+  if (!rec) return send(res, 404, { error: 'That coin was not launched from BurnPad.' });
   const key = c.cluster + ':' + mint, hit = coinCache.get(key);
   let onchain;
   if (hit && Date.now() - hit.at < 45000) onchain = hit.data;
@@ -369,5 +369,5 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-if (require.main === module) server.listen(PORT, '0.0.0.0', () => console.log('BurnerPad listening on ' + PORT + ', data in ' + DATA_DIR));
+if (require.main === module) server.listen(PORT, '0.0.0.0', () => console.log('BurnPad listening on ' + PORT + ', data in ' + DATA_DIR));
 module.exports = server;

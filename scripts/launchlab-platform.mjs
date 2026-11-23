@@ -1,4 +1,4 @@
-// One-time setup: creates the BurnerPad platform on Raydium LaunchLab. Every LaunchLab coin launched here is made under this
+// One-time setup: creates the BurnPad platform on Raydium LaunchLab. Every LaunchLab coin launched here is made under this
 // platform, so these numbers set the platform fee, the creator fee and who receives the graduation liquidity.
 //
 //   node --env-file=.env scripts/launchlab-platform.mjs --check     print the settings and send nothing
@@ -88,7 +88,7 @@ const { execute, extInfo } = await raydium.launchpad.createPlatformConfig({
   platformVestingWallet: PublicKey.default, cpConfigId: new PublicKey(cpConfig), transferFeeExtensionAuth: admin.publicKey,
   creatorFeeRate: rate(creatorPct), feeRate: rate(feePct),
   migrateCpLockNftScale: { platformScale: new BN(scale(lpPlatform)), creatorScale: new BN(scale(lpCreator)), burnScale: new BN(burnScale) },
-  name: process.env.LAUNCHLAB_NAME || 'BurnerPad', web: process.env.LAUNCHLAB_WEB || process.env.PUBLIC_URL || 'https://burnerpad.xyz', img: process.env.LAUNCHLAB_IMG || (process.env.PUBLIC_URL || 'https://burnerpad.xyz') + '/favicon.svg',
+  name: process.env.LAUNCHLAB_NAME || 'BurnPad', web: process.env.LAUNCHLAB_WEB || process.env.PUBLIC_URL || 'https://burnerpad.xyz', img: process.env.LAUNCHLAB_IMG || (process.env.PUBLIC_URL || 'https://burnerpad.xyz') + '/favicon.svg',
   txVersion: TxVersion.V0
 });
 const sent = await execute({ sendAndConfirm: true });

@@ -625,7 +625,7 @@ export async function createCoin({ cluster, wallet, user, name, symbol, uri, dev
 
 // ---------- Burner wallets ----------
 // A burner is a fresh keypair made in this browser. The secret never goes to the server. The person funds it
-// from their own wallet, so BurnerPad never holds money. It speaks the same signTransaction interface as Phantom.
+// from their own wallet, so BurnPad never holds money. It speaks the same signTransaction interface as Phantom.
 export function newBurner() {
   const kp = Keypair.generate();
   return burnerFromSecret(kp.secretKey);
