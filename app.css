@@ -39,7 +39,7 @@ footer{border-top:1px solid var(--line);margin-top:60px;padding:24px 0;color:var
 .flame .fo{animation:flick 1.3s ease-in-out infinite}
 .flame .fi{animation:flick 0.9s ease-in-out infinite reverse}
 @keyframes flick{0%,100%{transform:scale(1,1) skewX(0)}20%{transform:scale(.95,1.07) skewX(3deg)}45%{transform:scale(1.03,.95) skewX(-2deg)}70%{transform:scale(.97,1.05) skewX(2deg)}}
-@keyframes glow{0%,100%{filter:drop-shadow(0 0 4px rgba(255,100,20,.3))}50%{filter:drop-shadow(0 0 10px rgba(255,140,40,.7))}}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 4px rgba(255,255,255,.22))}50%{filter:drop-shadow(0 0 10px rgba(255,255,255,.5))}}
 /* motion */
 .btn,.f,.tile,.venue,nav a{transition:background .18s,border-color .18s,transform .18s,color .18s}
 .btn:active{transform:scale(.97)}
@@ -103,7 +103,7 @@ nav a .ic{width:18px;height:18px;flex:none;display:none}
 /* A big, soft flame glowing far behind the step cells */
 .fwrap{position:relative;isolation:isolate}
 .bgflame{position:absolute;left:50%;top:50%;width:min(440px,80%);aspect-ratio:1;transform:translate(-50%,-50%);z-index:-1;pointer-events:none}
-.bgflame::before{content:"";position:absolute;inset:-25%;background:radial-gradient(closest-side,rgba(255,110,30,.2),rgba(255,70,20,.07) 55%,transparent 75%);animation:bgpulse 5s ease-in-out infinite}
+.bgflame::before{content:"";position:absolute;inset:-25%;background:radial-gradient(closest-side,rgba(255,255,255,.12),rgba(255,255,255,.04) 55%,transparent 75%);animation:bgpulse 5s ease-in-out infinite}
 .bgflame svg{position:relative;width:100%;height:100%;filter:blur(8px) saturate(1.1);opacity:.34;transform-origin:50% 100%;animation:bgflick 3.4s ease-in-out infinite}
 @keyframes bgpulse{50%{opacity:.6;transform:scale(1.06)}}
 @keyframes bgflick{0%,100%{transform:scale(1,1) skewX(0)}25%{transform:scale(.97,1.05) skewX(2deg)}55%{transform:scale(1.02,.97) skewX(-1.5deg)}80%{transform:scale(.99,1.04) skewX(1deg)}}
