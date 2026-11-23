@@ -105,6 +105,12 @@ function cleanTwitter(v) {
   if (m) return 'https://x.com/' + m[1];
   return /^@?[A-Za-z0-9_]{1,15}$/.test(t) ? 'https://x.com/' + t.replace(/^@/, '') : null;
 }
+function cleanPost(v) {
+  const t = text(v, 160);
+  if (!t) return '';
+  const m = /^(?:https?:\/\/)?(?:www\.|mobile\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status\/(\d{5,25})\/?(?:[?#].*)?$/i.exec(t);
+  return m ? 'https://x.com/' + m[1] + '/status/' + m[2] : null;
+}
 function cleanWebsite(v) {
   const t = text(v, 120);
   if (!t) return '';
@@ -149,6 +155,7 @@ async function createMetadata(req, res) {
   if (!/^[A-Za-z0-9$._-]{1,10}$/.test(symbol)) return send(res, 400, { error: 'Ticker must be 1 to 10 letters or digits.' });
   if (badWords(name) || badWords(symbol) || badWords(description)) return send(res, 400, { error: 'That name, ticker or description is not allowed here.' });
   const twitter = cleanTwitter(input.twitter); if (twitter === null) return send(res, 400, { error: 'X must be a handle like @yourcoin or an x.com link.' });
+  const post = cleanPost(input.post); if (post === null) return send(res, 400, { error: 'The X post must be a link like https://x.com/name/status/123.' });
   const telegram = cleanTelegram(input.telegram); if (telegram === null) return send(res, 400, { error: 'Telegram must be a t.me link.' });
   const website = cleanWebsite(input.website); if (website === null) return send(res, 400, { error: 'Website must be a link starting with https://.' });
   const id = crypto.randomBytes(8).toString('hex');
@@ -156,6 +163,7 @@ async function createMetadata(req, res) {
   fs.writeFileSync(path.join(IMG_DIR, id + '.' + ext), img);
   const doc = { name, symbol, description, image: base + '/images/' + id + '.' + ext, external_url: base, createdOn: base };
   if (twitter) doc.twitter = twitter;
+  if (post) doc.post = post;
   if (telegram) doc.telegram = telegram;
   if (website) doc.website = website;
   fs.writeFileSync(path.join(META_DIR, id + '.json'), JSON.stringify(doc, null, 2));
@@ -249,7 +257,7 @@ async function coinInfo(res, mint) {
   send(res, 200, {
     cluster: c.cluster, mint, name: rec.name, symbol: rec.symbol, venue: rec.venue, creator: rec.wallet, burner: !!rec.burner,
     launchedAt: rec.at, signature: rec.signature, image: rec.image ? '/images/' + rec.image : '', description: meta.description || '',
-    twitter: meta.twitter || '', telegram: meta.telegram || '', website: meta.website || '', split: !!rec.split, platformBps: rec.platformBps || 0,
+    twitter: meta.twitter || '', post: meta.post || '', telegram: meta.telegram || '', website: meta.website || '', split: !!rec.split, platformBps: rec.platformBps || 0,
     pool: rec.pool || '', onchain, trust: trustChecks(onchain, { venue: rec.venue, split: rec.split, platformBps: rec.platformBps || 0 }),
   });
 }

@@ -61,6 +61,12 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   r = await call('POST', '/api/metadata', { name: 'Burner Cat', symbol: 'BCAT', description: 'hi', image: PNG, twitter: '@burnercat', telegram: 't.me/burnercat', website: 'https://example.com' });
   check('metadata: created', r.status === 201 && /^[a-f0-9]{16}$/.test(r.json.id));
   const metaId = r.json.id;
+  let pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, post: 'https://twitter.com/BurnerPad_sol/status/2124928890988806173?s=20' });
+  check('x post: accepted and normalised', pr.status === 201 && (await call('GET', '/metadata/' + pr.json.id + '.json')).json.post === 'https://x.com/BurnerPad_sol/status/2124928890988806173');
+  pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, post: 'https://evil.example/x.com/a/status/12345' });
+  check('x post: other sites rejected', pr.status === 400);
+  pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, post: 'https://x.com/BurnerPad_sol' });
+  check('x post: profile link is not a post', pr.status === 400);
   const doc = await call('GET', '/metadata/' + metaId + '.json');
   check('metadata json served with fields', doc.json && doc.json.name === 'Burner Cat' && doc.json.twitter === 'https://x.com/burnercat' && doc.json.telegram === 'https://t.me/burnercat' && /\/images\/.+\.png$/.test(doc.json.image));
   const imgPath = new URL(doc.json.image).pathname; const im = await call('GET', imgPath);

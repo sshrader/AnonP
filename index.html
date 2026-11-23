@@ -148,6 +148,7 @@ html,body{overflow-x:clip}
         <div class="field"><label for="desc">Description</label><textarea id="desc" rows="3" maxlength="280" placeholder="What is it? Keep it short."></textarea></div>
         <div class="row2 field"><div><label for="tw">X (optional)</label><input id="tw" placeholder="@handle" autocomplete="off"></div>
           <div><label for="tg">Telegram (optional)</label><input id="tg" placeholder="t.me/group" autocomplete="off"></div></div>
+        <div class="field"><label for="xp">X post (optional)</label><input id="xp" placeholder="https://x.com/yourname/status/123…" autocomplete="off"></div>
         <div class="field" style="margin:0"><label for="web">Website (optional)</label><input id="web" placeholder="https://" autocomplete="off"></div>
       </div>
       <div class="card">
@@ -440,7 +441,7 @@ $('go').addEventListener('click',function(){
   var recip=signer.address;if(S.mode==='burner'&&$('recip')&&$('recip').value==='custom'){recip=$('recipaddr').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(recip)){S.busy=false;updateAll();return fail('Enter a valid Solana address for creator fees.')}}
   var d=step('Save coin details');
   var meta;
-  api('/api/metadata',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,symbol:$('sym').value,description:$('desc').value,twitter:$('tw').value,telegram:$('tg').value,website:$('web').value,image:S.imgData})}).then(function(m){meta=m;d('ok','Stored on this server');
+  api('/api/metadata',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,symbol:$('sym').value,description:$('desc').value,twitter:$('tw').value,post:$('xp').value,telegram:$('tg').value,website:$('web').value,image:S.imgData})}).then(function(m){meta=m;d('ok','Stored on this server');
     var bps=feeBps(),sh=null;
     if(S.platform&&bps&&S.platform.wallet!==recip){sh=[{address:recip,shareBps:10000-bps},{address:S.platform.wallet,shareBps:bps}]}
     else if(recip!==signer.address){sh=[{address:recip,shareBps:10000}]}
