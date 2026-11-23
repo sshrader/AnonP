@@ -99,6 +99,7 @@ function render(j){
   var img=h('img',{alt:''});if(j.image)img.src=j.image;
   var chips=h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;align-items:center'},[h('span',{class:'chip live',text:VEN[j.venue]||j.venue}),j.burner?h('span',{class:'chip',text:'launched from a burner'}):null,h('span',{class:'muted small',text:ago(j.launchedAt)})]);
   m.appendChild(h('div',{class:'head'},[img,h('div',{},[h('h1',{text:j.name}),h('div',{class:'mono muted',style:'margin-bottom:8px',text:'$'+j.symbol}),chips])]));
+  var ca=h('div',{style:'display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:0 0 18px;max-width:560px'},[h('code',{style:'font:13px var(--mono);overflow-wrap:anywhere;flex:1;min-width:0',text:j.mint})]);var cab=h('button',{class:'btn sm',type:'button',text:'Copy CA'});cab.onclick=function(){var ok=function(){cab.textContent='Copied';setTimeout(function(){cab.textContent='Copy CA'},1200)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(j.mint).then(ok,function(){});};ca.appendChild(cab);m.appendChild(ca);
   if(j.description)m.appendChild(h('p',{class:'lede',style:'margin:0 0 22px',text:j.description}));
   var left=h('div',{class:'stack'}),right=h('div',{class:'stack'});
   // trust
