@@ -164,6 +164,7 @@ html,body{overflow-x:clip}
         <table class="sum" id="sum"></table>
         <div class="note" id="feenote"></div>
         <div id="recipbox" class="field" hidden></div>
+        <div class="field"><label for="after">After launch</label><select id="after"><option value="stay">Stay on this page</option><option value="coin">Open coin page in a new tab</option><option value="gmgn">Open on GMGN in a new tab (mainnet)</option></select><div class="muted small" id="aftertxt" style="margin-top:6px"></div></div>
         <button class="btn pri" id="go" style="width:100%;margin-top:6px" disabled>Launch</button>
         <div class="err" id="err" style="margin-top:10px"></div>
       </div>
@@ -419,10 +420,21 @@ function updateAll(){
 }
 ['name','sym','buy','desc'].forEach(function(id){$(id).addEventListener('input',function(){if(id==='buy'){var m=S.maxBuy;if(+this.value>m)this.value=m}updateAll()})});
 
+
+// ---------- after launch: open a tab ----------
+// The blank tab is opened inside the Launch click (browsers allow that) and pointed at the coin once it exists.
+function gmgnUrl(m){return 'https://gmgn.ai/sol/token/'+m}
+function afterPick(){var v=$('after').value;if(v==='gmgn'&&S.cluster!=='mainnet')return 'coin';return v}
+function afterNote(){var v=$('after').value;$('aftertxt').textContent=v==='stay'?'':v==='gmgn'&&S.cluster!=='mainnet'?'GMGN lists mainnet coins only. On devnet this opens the coin page instead.':v==='gmgn'?'Opens as soon as the coin is minted. GMGN can take a minute to index a new coin. Allow pop-ups for this site if nothing opens.':'Opens when the coin is listed. Allow pop-ups for this site if nothing opens.'}
+(function(){var a=ls('burnerpad.after');if(a==='coin'||a==='gmgn'||a==='stay')$('after').value=a;afterNote();$('after').addEventListener('change',function(){ls('burnerpad.after',$('after').value);afterNote()})})();
+var tabW=null,tabDone=false;
+function openBlankTab(){tabW=null;tabDone=false;if(afterPick()==='stay')return;try{tabW=window.open('','_blank');if(tabW)tabW.document.write('<title>Launching…</title><body style="background:#0a0a0a;color:#9a9a9a;font:16px system-ui,sans-serif;padding:48px">Launching… this tab opens your coin as soon as it is ready.</body>')}catch(e){tabW=null}}
+function tabGo(url){if(!tabW||tabDone)return;try{tabW.opener=null;tabW.location.href=url;tabDone=true}catch(e){}}
+function tabClose(){if(tabW&&!tabDone){try{tabW.close()}catch(e){}}tabW=null}
 // ---------- launch: go ----------
 function logStep(label,box){var row=h('div',{class:'run'},[h('span',{class:'s',text:'…'}),h('span',{text:label})]);(box||$('log')).appendChild(row);return function(state,detail,href){row.className=state==='ok'?'ok':state==='warn'?'warn':'err';row.firstChild.textContent=state==='ok'?'✓':state==='warn'?'!':'✕';var sp=row.lastChild;sp.textContent=label;if(detail){sp.appendChild(document.createTextNode(' — '));if(href){var a=h('a',{href:href,target:'_blank',rel:'noopener',text:detail});sp.appendChild(a)}else sp.appendChild(document.createTextNode(detail))}}}
 $('go').addEventListener('click',function(){
-  if(S.busy)return;fail('');S.busy=true;updateAll();$('logcard').hidden=false;$('log').textContent='';$('result').textContent='';
+  if(S.busy)return;fail('');openBlankTab();S.busy=true;updateAll();$('logcard').hidden=false;$('log').textContent='';$('result').textContent='';
   var step=logStep;var buy=Math.max(0,+$('buy').value||0);
   var signer=S.mode==='burner'?{wallet:S.burner.wallet,address:S.burner.address}:{wallet:S.phantom.provider,address:S.phantom.address};
   var recip=signer.address;if(S.mode==='burner'&&$('recip')&&$('recip').value==='custom'){recip=$('recipaddr').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(recip)){S.busy=false;updateAll();return fail('Enter a valid Solana address for creator fees.')}}
@@ -435,13 +447,14 @@ $('go').addEventListener('click',function(){
     if(S.venue==='raydium')return B().createCoinLaunchLab({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,platform:S.raydium.platform},step);
     if(S.venue==='meteora')return B().createCoinMeteora({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,dbcConfig:S.meteora.config},step);
     return B().createCoin({cluster:S.cluster,wallet:signer.wallet,user:signer.address,name:$('name').value.trim(),symbol:$('sym').value.trim(),uri:m.uri,devBuySol:buy,shareholders:sh,allowSplitFallback:S.cluster==='devnet'},step)}).then(function(out){
+      if(afterPick()==='gmgn')tabGo(gmgnUrl(out.mint));
       var d2=step('List on BurnerPad');
       return api('/api/launched',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mint:out.mint,signature:out.signature,metaId:meta.id,venue:S.venue,pool:out.pool||'',splitSignature:out.splitSignature||'',burner:S.mode==='burner'})}).then(function(){d2('ok','Listed');finish(out)},function(e){d2('warn','Not listed: '+e.message);finish(out)})
-    }).catch(function(e){S.busy=false;fail(e&&e.message||'Launch failed.');updateAll()})});
-function finish(out){S.busy=false;var box=$('result');box.textContent='';var c=h('div',{class:'done'});c.appendChild(h('b',{text:'Launched.'}));c.appendChild(h('div',{class:'mono small',style:'margin:6px 0 10px;overflow-wrap:anywhere',text:out.mint}));
+    }).catch(function(e){tabClose();S.busy=false;fail(e&&e.message||'Launch failed.');updateAll()})});
+function finish(out){S.busy=false;if(afterPick()==='coin')tabGo('/coin/'+out.mint);else if(afterPick()==='gmgn')tabGo(gmgnUrl(out.mint));tabW=null;var box=$('result');box.textContent='';var c=h('div',{class:'done'});c.appendChild(h('b',{text:'Launched.'}));c.appendChild(h('div',{class:'mono small',style:'margin:6px 0 10px;overflow-wrap:anywhere',text:out.mint}));
   if(out.splitError)c.appendChild(h('div',{class:'err small',text:'The fee split did not go through ('+out.splitError+'). Creator fees go only to the launching wallet.'}));
   if(out.buyError)c.appendChild(h('div',{class:'err small',text:'The first buy did not go through: '+out.buyError}));
-  var r=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});r.appendChild(h('a',{class:'btn pri sm',href:'/coin/'+out.mint,text:'Open coin page'}));r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:S.venue==='pump'?'https://pump.fun/coin/'+out.mint:'https://jup.ag/tokens/'+out.mint,text:S.venue==='pump'?'pump.fun':'Jupiter'}));c.appendChild(r);
+  var r=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});r.appendChild(h('a',{class:'btn pri sm',href:'/coin/'+out.mint,text:'Open coin page'}));if(S.cluster==='mainnet')r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:gmgnUrl(out.mint),text:'Open on GMGN'}));r.appendChild(h('a',{class:'btn sm',target:'_blank',rel:'noopener',href:S.venue==='pump'?'https://pump.fun/coin/'+out.mint:'https://jup.ag/tokens/'+out.mint,text:S.venue==='pump'?'pump.fun':'Jupiter'}));c.appendChild(r);
   if(S.mode==='burner'){var sw=h('div',{style:'margin-top:14px'});sw.appendChild(h('label',{text:'Sweep leftover SOL out of the burner (optional)'}));sw.appendChild(h('input',{id:'swto',placeholder:'Destination address'}));sw.appendChild(h('div',{class:'muted small',style:'margin:6px 0 8px',text:'This links the destination to the burner on-chain. Tokens you bought stay in the burner.'}));var sb=h('button',{class:'btn sm',type:'button',text:'Sweep SOL'});sb.onclick=function(){var to=$('swto').value.trim();if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to))return fail('Enter a valid destination address.');sb.disabled=true;B().sweep({cluster:S.cluster,burner:S.burner,to:to},logStep).then(function(){pollBal()},function(e){fail(e.message)}).then(function(){sb.disabled=false})};sw.appendChild(sb);c.appendChild(sw)}
   box.appendChild(c);updateAll()}
 
@@ -471,7 +484,7 @@ function runClaim(btn,fn){if(C.busy)return;C.busy=true;btn.disabled=true;$('clog
 
 // ---------- boot ----------
 function boot(){
-  api('/api/state').then(function(s){S.cluster=s.cluster;S.platform=s.platform;S.meteora=s.meteora;S.raydium=s.raydium;S.venues=s.venues;S.maxBuy=s.maxBuy;var n=$('net');n.textContent=s.cluster==='mainnet'?'Mainnet':'Devnet';if(s.cluster==='mainnet')n.className='net main';
+  api('/api/state').then(function(s){S.cluster=s.cluster;afterNote();S.platform=s.platform;S.meteora=s.meteora;S.raydium=s.raydium;S.venues=s.venues;S.maxBuy=s.maxBuy;var n=$('net');n.textContent=s.cluster==='mainnet'?'Mainnet':'Devnet';if(s.cluster==='mainnet')n.className='net main';
     docFees();
     drawFilters();drawVenues();route()},function(e){document.body.insertBefore(h('div',{class:'wrap',style:'padding:20px',text:e.message}),document.body.firstChild)});
   drawPhantom();
