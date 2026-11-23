@@ -101,6 +101,8 @@ const badWords = (s) => { const t = String(s).toLowerCase().replace(/[^a-z]/g, '
 function cleanTwitter(v) {
   const t = text(v, 120);
   if (!t) return '';
+  const ps = cleanPost(t);
+  if (ps) return ps; // a link to a post is fine here too
   const m = /^(?:https?:\/\/)?(?:www\.|mobile\.)?(?:x|twitter)\.com\/@?([A-Za-z0-9_]{1,15})\/?(?:[?#].*)?$/i.exec(t);
   if (m) return 'https://x.com/' + m[1];
   return /^@?[A-Za-z0-9_]{1,15}$/.test(t) ? 'https://x.com/' + t.replace(/^@/, '') : null;
@@ -154,7 +156,7 @@ async function createMetadata(req, res) {
   if (!name) return send(res, 400, { error: 'Name is required.' });
   if (!/^[A-Za-z0-9$._-]{1,10}$/.test(symbol)) return send(res, 400, { error: 'Ticker must be 1 to 10 letters or digits.' });
   if (badWords(name) || badWords(symbol) || badWords(description)) return send(res, 400, { error: 'That name, ticker or description is not allowed here.' });
-  const twitter = cleanTwitter(input.twitter); if (twitter === null) return send(res, 400, { error: 'X must be a handle like @yourcoin or an x.com link.' });
+  const twitter = cleanTwitter(input.twitter); if (twitter === null) return send(res, 400, { error: 'X must be a handle like @yourcoin, an x.com profile link or an x.com post link.' });
   const post = cleanPost(input.post); if (post === null) return send(res, 400, { error: 'The X post must be a link like https://x.com/name/status/123.' });
   const telegram = cleanTelegram(input.telegram); if (telegram === null) return send(res, 400, { error: 'Telegram must be a t.me link.' });
   const website = cleanWebsite(input.website); if (website === null) return send(res, 400, { error: 'Website must be a link starting with https://.' });

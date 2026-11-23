@@ -101,7 +101,8 @@ function render(j){
   m.appendChild(h('div',{class:'head'},[img,h('div',{},[h('h1',{text:j.name}),h('div',{class:'mono muted',style:'margin-bottom:8px',text:'$'+j.symbol}),chips])]));
   var ca=h('div',{style:'display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:0 0 18px;max-width:560px'},[h('code',{style:'font:13px var(--mono);overflow-wrap:anywhere;flex:1;min-width:0',text:j.mint})]);var cab=h('button',{class:'btn sm',type:'button',text:'Copy CA'});cab.onclick=function(){var ok=function(){cab.textContent='Copied';setTimeout(function(){cab.textContent='Copy CA'},1200)};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(j.mint).then(ok,function(){});};ca.appendChild(cab);m.appendChild(ca);
   if(j.description)m.appendChild(h('p',{class:'lede',style:'margin:0 0 22px',text:j.description}));
-  if(j.post){var pm=/x\.com\/([^/]+)\/status\//.exec(j.post);var pc=h('a',{href:j.post,target:'_blank',rel:'noopener nofollow',style:'display:flex;align-items:center;gap:12px;max-width:560px;margin:0 0 22px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--panel);color:var(--fg);text-decoration:none'},[h('b',{style:'font-size:20px;line-height:1',text:'𝕏'}),h('div',{style:'min-width:0'},[h('div',{style:'font-weight:600',text:'Post from @'+(pm?pm[1]:'')}),h('div',{class:'muted small',text:'View on X · opens x.com'})])]);m.appendChild(pc)}
+  var postUrl=j.post||(/\/status\//.test(j.twitter||'')?j.twitter:'');
+  if(postUrl){var pm=/x\.com\/([^/]+)\/status\//.exec(postUrl);var pc=h('a',{href:postUrl,target:'_blank',rel:'noopener nofollow',style:'display:flex;align-items:center;gap:12px;max-width:560px;margin:0 0 22px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--panel);color:var(--fg);text-decoration:none'},[h('b',{style:'font-size:20px;line-height:1',text:'𝕏'}),h('div',{style:'min-width:0'},[h('div',{style:'font-weight:600',text:'Post from @'+(pm?pm[1]:'')}),h('div',{class:'muted small',text:'View on X · opens x.com'})])]);m.appendChild(pc)}
   var left=h('div',{class:'stack'}),right=h('div',{class:'stack'});
   // trust
   var tc=h('div',{class:'card'},[h('h2',{text:'Checks'})]);var list=h('div',{class:'checks'});
@@ -123,7 +124,9 @@ function render(j){
   if(j.venue==='pump')lk.appendChild(h('a',{class:'btn sm',href:'https://pump.fun/coin/'+j.mint,target:'_blank',rel:'noopener',text:'pump.fun'}));else lk.appendChild(h('a',{class:'btn sm',href:'https://jup.ag/tokens/'+j.mint,target:'_blank',rel:'noopener',text:'Jupiter'}));
   lk.appendChild(h('a',{class:'btn sm',href:explorer(j.cluster,'address/'+j.mint),target:'_blank',rel:'noopener',text:'Explorer'}));
   lk.appendChild(h('a',{class:'btn sm',href:explorer(j.cluster,'tx/'+j.signature),target:'_blank',rel:'noopener',text:'Launch tx'}));
-  if(j.twitter)lk.appendChild(h('a',{class:'btn sm',href:j.twitter,target:'_blank',rel:'noopener nofollow',text:'X'}));
+  if(j.twitter&&!/\/status\//.test(j.twitter))lk.appendChild(h('a',{class:'btn sm',href:j.twitter,target:'_blank',rel:'noopener nofollow',text:'X'}));
+  var xpost=j.post||(/\/status\//.test(j.twitter||'')?j.twitter:'');
+  if(xpost)lk.appendChild(h('a',{class:'btn sm',href:xpost,target:'_blank',rel:'noopener nofollow',text:'X post'}));
   if(j.telegram)lk.appendChild(h('a',{class:'btn sm',href:j.telegram,target:'_blank',rel:'noopener nofollow',text:'Telegram'}));
   if(j.website)lk.appendChild(h('a',{class:'btn sm',href:j.website,target:'_blank',rel:'noopener nofollow',text:'Website'}));
   lc.appendChild(lk);right.appendChild(lc);

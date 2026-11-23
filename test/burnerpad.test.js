@@ -63,6 +63,8 @@ function check(label, ok, extra) { console.log((ok ? 'PASS ' : 'FAIL ') + label 
   const metaId = r.json.id;
   let pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, post: 'https://twitter.com/BurnerPad_sol/status/2124928890988806173?s=20' });
   check('x post: accepted and normalised', pr.status === 201 && (await call('GET', '/metadata/' + pr.json.id + '.json')).json.post === 'https://x.com/BurnerPad_sol/status/2124928890988806173');
+  pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, twitter: 'https://x.com/BurnerPad_sol/status/2124928890988806173' });
+  check('x field: accepts a post link', pr.status === 201 && (await call('GET', '/metadata/' + pr.json.id + '.json')).json.twitter === 'https://x.com/BurnerPad_sol/status/2124928890988806173');
   pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, post: 'https://evil.example/x.com/a/status/12345' });
   check('x post: other sites rejected', pr.status === 400);
   pr = await call('POST', '/api/metadata', { name: 'Post Cat', symbol: 'PCAT', description: 'hi', image: PNG, post: 'https://x.com/BurnerPad_sol' });
