@@ -34,7 +34,7 @@ footer{border-top:1px solid var(--line);margin-top:60px;padding:24px 0;color:var
 @media(max-width:560px){nav a{padding:7px 9px}.net{display:none}}
 
 /* flame */
-.flame{width:26px;height:26px;overflow:visible;filter:drop-shadow(0 0 5px rgba(255,120,30,.45));animation:glow 2.4s ease-in-out infinite}
+.flame{width:26px;height:26px;overflow:visible;filter:drop-shadow(0 0 5px rgba(255,255,255,.35));animation:glow 2.4s ease-in-out infinite}
 .flame .fo,.flame .fi{transform-box:fill-box;transform-origin:50% 100%}
 .flame .fo{animation:flick 1.3s ease-in-out infinite}
 .flame .fi{animation:flick 0.9s ease-in-out infinite reverse}

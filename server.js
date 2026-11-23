@@ -332,7 +332,7 @@ function serveStatic(res, file, type, extra) {
   res.end(data);
 }
 const page = (res, file) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' }); res.end(fs.readFileSync(path.join(__dirname, file))); };
-const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a0a0a"/><defs><linearGradient id="g" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3b1f"/><stop offset="1" stop-color="#ffb02e"/></linearGradient></defs><path d="M32 6c3 9 15 15 15 30a15 15 0 0 1-30 0c0-6 3-10 6-13 0 5 3 7 5 7-2-9 0-17 4-24z" fill="url(#g)"/><path d="M32 32c2 4 7 7 7 13a7 7 0 0 1-14 0c0-3 2-5 3-7 0 3 2 3 3 3-1-4-1-6 1-9z" fill="#fff0a0"/></svg>';
+const FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0a0a0a"/><path d="M32 6c3 9 15 15 15 30a15 15 0 0 1-30 0c0-6 3-10 6-13 0 5 3 7 5 7-2-9 0-17 4-24z" fill="#fff"/><path d="M32 32c2 4 7 7 7 13a7 7 0 0 1-14 0c0-3 2-5 3-7 0 3 2 3 3 3-1-4-1-6 1-9z" fill="#8a8a8a"/></svg>';
 const CORS = { 'Access-Control-Allow-Origin': '*' };
 
 const server = http.createServer(async (req, res) => {
